@@ -6,6 +6,8 @@
  *   win   胜利上行琶音               lose 失败下行音
  *   BGM   music/bgm.mp3 循环背景音乐（跟随 enabled 开关）
  * 可通过 DD.SFX.enabled（设置持久化）一键开关；
+ * 混音层级：BGM 为背景垫(0.14) < 音效总线(0.35)内按功能分级——
+ * 微调听感请调 bgm.volume 与 _master.gain.value 两个旋钮；
  * 惰性创建 AudioContext，首次用户手势后解锁自动播放限制。
  * ========================================================= */
 (function (root) {
@@ -25,7 +27,7 @@
       if (!AC) return null;
       SFX._ctx = new AC();
       SFX._master = SFX._ctx.createGain();
-      SFX._master.gain.value = 0.25;
+      SFX._master.gain.value = 0.35; // 音效总线：整体响度高于 BGM 背景垫，功能音可清晰穿透
       SFX._master.connect(SFX._ctx.destination);
     } catch (e) {
       SFX._ctx = null;
@@ -47,7 +49,7 @@
     try {
       bgm = new Audio('music/bgm.mp3');
       bgm.loop = true;
-      bgm.volume = 0.175; // 原音量的 50%
+      bgm.volume = 0.14; // 背景垫层级：明显低于音效层，不抢主观响度
     } catch (e) { bgm = null; }
     function bgmSync() {
       if (!bgm) return;
