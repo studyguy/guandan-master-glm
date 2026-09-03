@@ -130,6 +130,7 @@
     // 收集候选窗口；顺子与同花顺长度为 5；连对为 [3..7] 组；钢板为 [2..6] 组
     var windows = [];
     for (var start = 1; start <= 10; start++) { // 线段 1..14
+      if (start === 2) continue; // 23456 非法（2 不能作连片中段）
       for (var end = Math.max(start, start + 4); end <= 14; end++) {
         var len = end - start + 1;
         if (len >= 5 && len <= 14) windows.push([start, end]);
@@ -192,35 +193,38 @@
       var st = tryRun(1, 5, 5);
       if (st) return st;
     }
-    // 连对：恰好三连对（6 张 = 3 个连续点数 × 各 2 张；规则无二连对/四连对及以上）
+    // 三连对：恰好 3 组连续对子（6 张；无二连对/四连对及以上；A 可作 1 → AA2233）；
+    // 钢板：恰好 2~3 组连续三同张（6/9 张；A 可作 1 → AAA222）。
+    // 两者同为 6 张，按牌面归组判定；axis 编码 1=A，windowPhys 还原物理点数
     if (n === 6) {
-      var lo6, ok6, used6, vv6;
-      for (lo6 = 3; lo6 + 2 <= 14; lo6++) {
-        ok6 = true; used6 = 0;
-        for (vv6 = lo6; vv6 < lo6 + 3; vv6++) {
-          var c6 = natCnt[vv6] || 0;
+      for (var lo6 = 1; lo6 <= 12; lo6++) {
+        var ok6 = true, used6 = 0;
+        for (var vv6 = lo6; vv6 < lo6 + 3; vv6++) {
+          var pv6 = windowPhys([lo6], vv6 - lo6);
+          var c6 = natCnt[pv6] || 0;
           if (c6 > 2) { ok6 = false; break; }
           used6 += c6;
         }
         if (!ok6) continue;
         if (used6 + w !== 6) continue; // 万能配恰好补齐缺口（配不能剩余）
-        return mk('DSTRAIGHT', DD.effOf(lo6 + 2, level), { len: 3, low: lo6, high: lo6 + 2 });
+        var hiP6 = windowPhys([lo6], 2), loP6 = windowPhys([lo6], 0);
+        return mk('DSTRAIGHT', DD.effOf(hiP6, level), { len: 3, low: loP6, high: hiP6 });
       }
-      return null;
     }
-    // 钢板：恰好 2~3 组连续三同张（6/9 张；万能配可补位）
     if (n === 6 || n === 9) {
-      var gN = n / 3, loT, okT, usedT, vvT;
-      for (loT = 3; loT + gN - 1 <= 14; loT++) {
-        okT = true; usedT = 0;
-        for (vvT = loT; vvT < loT + gN; vvT++) {
-          var cT = natCnt[vvT] || 0;
+      var gN = n / 3;
+      for (var loT = 1; loT + gN - 1 <= 14; loT++) {
+        var okT = true, usedT = 0;
+        for (var vvT = loT; vvT < loT + gN; vvT++) {
+          var pvT = windowPhys([loT], vvT - loT);
+          var cT = natCnt[pvT] || 0;
           if (cT > 3) { okT = false; break; }
           usedT += cT;
         }
         if (!okT) continue;
         if (usedT + w !== n) continue; // 万能配恰好补齐缺口（配不能剩余）
-        return mk('TRIPLE_SEQ', DD.effOf(loT + gN - 1, level), { len: gN, low: loT, high: loT + gN - 1 });
+        var hiPT = windowPhys([loT], gN - 1), loPT = windowPhys([loT], 0);
+        return mk('TRIPLE_SEQ', DD.effOf(hiPT, level), { len: gN, low: loPT, high: hiPT });
       }
       return null;
     }
@@ -256,6 +260,8 @@
 
     // ===== 对子 / 单张 =====
     if (n === 2) {
+      // 两张红桃级牌天然同点同花 = 级牌对（可作任意点数对子使用）
+      if (w === 2) return mk('PAIR', DD.effOf(level, level), { rank: level });
       for (var pv = 2; pv <= 14; pv++) {
         var pc = natCnt[pv] || 0;
         if (pc === 2 || (pc === 1 && w === 1)) return mk('PAIR', DD.effOf(pv, level), { rank: pv });

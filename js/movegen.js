@@ -84,6 +84,7 @@
     for (i2 = 0; i2 < 2; i2++) { // 两轮：0=普通顺，1=同花顺（若自然同花则覆盖）
     }
     for (var start = 1; start <= 10; start++) {
+      if (start === 2) continue; // 23456 非法
       if (!DD.RULES.a2345 && start === 1) continue;
       var run = [];
       for (var p = start; p < start + 5; p++) run.push([axisV(p), 1]);

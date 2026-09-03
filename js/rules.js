@@ -31,7 +31,7 @@
   // 等级序列：2,3,...,K,A
   DD.LEVELS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
   DD.levelText = function (lv) {
-    return lv === 14 ? 'A' : String(lv);
+    return DD.RANK_NAME[lv] || String(lv); // 11→J 12→Q 13→K 14→A（旧版缺映射，打 J 显示为"打 11"）
   };
 
   // 升级：升 n 级（越过 A 仍需通过 A，不循环）
