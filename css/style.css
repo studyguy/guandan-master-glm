@@ -110,6 +110,11 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 .card.small .pip { font-size: calc(var(--card-w) * 0.3); }
 .card.small .jk { font-size: calc(var(--card-w) * 0.28); }
 .card.back { background: repeating-linear-gradient(45deg, #274d8f, #274d8f 5px, #1d3c72 5px, #1d3c72 10px); border-color: #16305e; }
+/* 锁牌：用户锁定的牌恒定排在牌堆最左，金框 + 🔒 角标 */
+#hand .hcol.locked .card { box-shadow: 0 0 0 2px var(--c-accent), 0 2px 6px rgba(0,0,0,.4); }
+.card.locked::before { content: '🔒'; position: absolute; top: 4%; right: 5%;
+  font-size: max(9px, calc(var(--card-w) * 0.17)); z-index: 2; }
+
 /* 同顺徽章：该牌属于同花色连张组（同花顺机会） */
 .card.tongshun::after { content: '同顺'; position: absolute; bottom: 6%; left: 50%; transform: translateX(-50%);
   font-size: max(9px, calc(var(--card-w) * 0.17)); background: #1d5c3f; color: var(--c-accent);

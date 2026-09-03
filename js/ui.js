@@ -25,7 +25,7 @@
   var UI = DD.UI = {
     settings: { difficulty: 'easy', coach: true, counter: true, counterFolded: false, rotateDismissed: false, sortMode: 'smart' },
     game: null,
-    selected: {}, advice: null, plans: [],
+    selected: {}, locked: {}, advice: null, plans: [],
     selectedPlanKey: null, review: '', analysisOpen: false,
     playedAcc: {},           // 对手已出计数（我/队友用当前手牌扣除）
     orderBadges: ['', '🥇', '🥈', '🥉', '4'],
@@ -39,11 +39,9 @@
       for (var k in s) if (k in UI.settings) UI.settings[k] = s[k];
       UI.stats = Object.assign({ wins: 0, games: 0 }, JSON.parse(localStorage.getItem('dd_trainer_stats') || '{}'));
     } catch (e) { /* ignore */ }
-    // 旧设置迁移：coachOpen（悬浮球时代的展开态）与"花色排序"不再使用
-    try {
-      if (UI.settings.sortMode === 'suit') UI.settings.sortMode = 'smart';
-      delete UI.settings.coachOpen;
-    } catch (e) { /* ignore */ }
+    // 旧设置迁移：coachOpen（悬浮球时代的展开态）不再使用
+    try { delete UI.settings.coachOpen; } catch (e) { /* ignore */ }
+    if (['smart', 'suit', 'rank'].indexOf(UI.settings.sortMode) < 0) UI.settings.sortMode = 'smart';
   }
   function saveSettings() { try { localStorage.setItem('dd_trainer_settings', JSON.stringify(UI.settings)); } catch (e) { /* */ } }
   function saveStats() { try { localStorage.setItem('dd_trainer_stats', JSON.stringify(UI.stats)); } catch (e) { /* */ } }
@@ -198,34 +196,31 @@
   // 当前理牌模式的列结构：每列 = 同点数一叠（纵向排列）；智能理牌时按
   // 王→炸弹→同花色连张(同顺)→三张→对子→单张 分组，组间留间隔
   function handColumns(st) {
-    if (UI.settings.sortMode === 'smart') {
-      return DD.arrangeHandSmart(st.players[HUMAN].hand, st.tableLevel).columns.map(function (col) {
-        return { tag: col.tag, cards: col.cards.slice() };
-      });
-    }
-    var sorted = DD.sortByLevel(st.players[HUMAN].hand, st.tableLevel);
-    var cols = [];
-    sorted.forEach(function (c) {
-      var eff = DD.effOf(c.v, st.tableLevel);
-      if (!cols.length || cols[cols.length - 1].eff !== eff) cols.push({ eff: eff, tag: '', cards: [] });
-      cols[cols.length - 1].cards.push(c);
-    });
-    return cols.map(function (col) { return { tag: '', cards: col.cards }; });
+    return DD.arrangeHandColumns(st.players[HUMAN].hand, st.tableLevel, UI.settings.sortMode, UI.locked).columns;
+  }
+  function toggleLock(c, st) {
+    if (UI.locked[c.id]) delete UI.locked[c.id];
+    else UI.locked[c.id] = c;
+    UI._lastLockAt = Date.now();
+    DD.SFX && DD.SFX.play('click');
+    renderHand(st);
+    updateComboLabel(st);
   }
 
   function renderHand(st) {
     var box = $('#hand');
     box.innerHTML = '';
     var cols = handColumns(st);
-    var smart = UI.settings.sortMode === 'smart';
     cols.forEach(function (col, ci) {
-      var colDiv = el('div', 'hcol');
+      var colDiv = el('div', 'hcol' + (col.tag === '锁' ? ' locked' : ''));
       col.cards.sort(function (a, b) { return a.s - b.s || a.d - b.d; });
       col.cards.forEach(function (c, k) {
         var e = cardEl(c, false);
         if (UI.selected[c.id]) e.classList.add('sel');
+        if (UI.locked[c.id]) e.classList.add('locked');
         if (col.tag === '同顺' && k === col.cards.length - 1) e.classList.add('tongshun');
         e.addEventListener('click', function () {
+          if (UI._lpFired === c.id) { UI._lpFired = null; return; } // 长按锁牌后吞掉本次点击
           var now = Date.now();
           if (UI._lastTap && UI._lastTap.id === c.id && now - UI._lastTap.t < 350) { UI._lastTap = null; quickPlay(c); return; }
           UI._lastTap = { id: c.id, t: now };
@@ -236,9 +231,22 @@
           else { UI.selected[c.id] = c; e.classList.add('sel'); DD.SFX && DD.SFX.play('select', Object.keys(UI.selected).length); }
           updateComboLabel(st);
         });
+        // 锁牌：桌面右键 / 移动端长按 500ms（锁定后恒定排在牌堆最左）
+        e.addEventListener('contextmenu', function (ev) {
+          ev.preventDefault();
+          if (Date.now() - (UI._lastLockAt || 0) < 800) return; // 长按已处理，避免 contextmenu 二次触发
+          toggleLock(c, st);
+        });
+        e.addEventListener('pointerdown', function () {
+          clearTimeout(e._lpTimer);
+          e._lpTimer = setTimeout(function () { UI._lpFired = c.id; UI._lastLockAt = Date.now(); toggleLock(c, st); }, 500);
+        });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (evName) {
+          e.addEventListener(evName, function () { clearTimeout(e._lpTimer); });
+        });
         colDiv.appendChild(e);
       });
-      if (ci > 0 && smart && cols[ci - 1].tag !== col.tag) colDiv.dataset.gap = '1';
+      if (ci > 0 && cols[ci - 1].tag !== col.tag) colDiv.dataset.gap = '1';
       box.appendChild(colDiv);
     });
     layoutHand();
@@ -274,7 +282,8 @@
   function updateComboLabel(st) {
     var lab = $('#combo-label'), btn = $('#btn-play');
     var sel = getSelected();
-    if (!sel.length) { lab.innerHTML = '<span class="muted">点击手牌选牌（双击单张直接出）</span>'; btn.disabled = true; return; }
+    if (!sel.length) { lab.innerHTML = ''; lab.classList.add('hidden'); btn.disabled = true; return; }
+    lab.classList.remove('hidden');
     var view = UI.game.viewFor(HUMAN);
     var ev = DD.evaluateSelection(sel, view);
     btn.disabled = !ev.ok; btn.title = ev.ok ? '' : '无法这样出牌';
@@ -498,7 +507,7 @@
     switch (ev) {
       case 'deal':
         DD.SFX && DD.SFX.play('deal');
-        UI.playedAcc = {}; UI.selected = {}; UI.plans = []; UI.review = ''; UI.selectedPlanKey = null;
+        UI.playedAcc = {}; UI.selected = {}; UI.locked = {}; UI.plans = []; UI.review = ''; UI.selectedPlanKey = null;
         clearPlays(); renderAll(st); break;
       case 'state': renderAll(st); break;
       case 'needPlay':
@@ -521,6 +530,7 @@
         }
         break;
       case 'play':
+        d.move.cards.forEach(function (c) { delete UI.locked[c.id]; });
         showPlay(d.idx, d.move);
         if (d.idx === 1 || d.idx === 3) { // 对手
           d.move.cards.forEach(function (c) { UI.playedAcc[c.v] = (UI.playedAcc[c.v] || 0) + 1; });
@@ -657,14 +667,21 @@
       this.textContent = '🎓 教练' + (UI.settings.coach ? '' : '：关');
       if (UI.game) renderAll(UI.game.state());
     });
+    var sortModes = [['smart', '智能理牌'], ['suit', '花色理牌'], ['rank', '按大小']];
+    function sortLabel() {
+      for (var i = 0; i < sortModes.length; i++) if (sortModes[i][0] === UI.settings.sortMode) return '🔀 ' + sortModes[i][1];
+      return '🔀 智能理牌';
+    }
     $('#btn-sort-toggle').addEventListener('click', function () {
-      UI.settings.sortMode = UI.settings.sortMode === 'smart' ? 'rank' : 'smart';
+      var idx = 0;
+      for (var i = 0; i < sortModes.length; i++) if (sortModes[i][0] === UI.settings.sortMode) idx = i;
+      UI.settings.sortMode = sortModes[(idx + 1) % sortModes.length][0];
       saveSettings();
-      this.textContent = UI.settings.sortMode === 'smart' ? '↩ 恢复理牌' : '🔀 智能理牌';
+      this.textContent = sortLabel();
       DD.SFX && DD.SFX.play('click');
       if (UI.game) renderHand(UI.game.state());
     });
-    $('#btn-sort-toggle').textContent = UI.settings.sortMode === 'smart' ? '↩ 恢复理牌' : '🔀 智能理牌';
+    $('#btn-sort-toggle').textContent = sortLabel();
     $('#btn-counter-toggle').textContent = '🔍 记牌器';
     $('#btn-coach-toggle').textContent = '🎓 教练';
     // 快捷键

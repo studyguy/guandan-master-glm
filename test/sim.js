@@ -75,6 +75,32 @@ console.log('[1] 牌型/压制/万能配');
     return bj.rank === 16 && sj.rank === 15 && DD.moveLabel(bj) === '单张 大王' && DD.moveLabel(sj) === '单张 小王';
   })());
 
+  // 理牌列结构（三模式 + 锁牌恒左）
+  T('理牌列：锁牌恒最左单列', (function () {
+    var hand = mk([[3, 0], [3, 1], [9, 2], [5, 0], [16, -1], [15, -1]]);
+    var lock = {}; lock['9-2-0'] = 1; // 锁 ♣9
+    var r = DD.arrangeHandColumns(hand, 2, 'smart', lock);
+    var first = r.columns[0];
+    return first.tag === '锁' && first.cards.length === 1 && first.cards[0].id === '9-2-0';
+  })());
+  T('花色理牌：花色分组连排且王列最右', (function () {
+    var hand = mk([[5, 0], [9, 1], [3, 0], [14, 2], [16, -1], [5, 1], [4, 0]]);
+    var cols = DD.arrangeHandColumns(hand, 2, 'suit', null).columns;
+    if (cols.length !== 4) return false; // ♠ ♥ ♦ 王（♣ 空、无 3）
+    var suits = cols.map(function (c) { return c.cards[0].s; });
+    if (suits.join(',') !== '0,1,2,-1') return false;
+    // ♠ 组内升序：3,4,5
+    var spades = cols[0].cards.map(function (c) { return c.v; });
+    return spades.join(',') === '3,4,5';
+  })());
+  T('按大小理牌：同点数成列且列升序', (function () {
+    var hand = mk([[3, 0], [9, 1], [3, 1], [5, 0], [16, -1], [9, 2]]);
+    var cols = DD.arrangeHandColumns(hand, 2, 'rank', null).columns;
+    if (cols.length !== 4) return false; // 3,5,9,王
+    var vs = cols.map(function (c) { return c.cards[0].v; });
+    return vs.join(',') === '3,5,9,16' && cols[2].cards.length === 2;
+  })());
+
   // 智能理牌：王→炸弹→同花色连张(同顺)→三张→对子→单张；不丢牌、组内升序
   T('智能理牌分组完整且不丢牌', (function () {
     var hand = mk([[3, 0], [3, 1], [3, 2], [3, 3], [5, 0], [5, 1], [5, 2],
