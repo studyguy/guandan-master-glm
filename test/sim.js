@@ -68,6 +68,12 @@ console.log('[1] 牌型/压制/万能配');
   t = A([card(3, 0, 0), card(4, 0, 0), card(5, 0, 0), card(6, 0, 0), wc]);
   T('3456+配=顺或同花顺', !!t && (t.type === 'STRAIGHT' || t.type === 'FLUSH'));
   T('万能配不能当王(单张仍算级牌)', A([wc], 5).main === 17);
+
+  // 王/级牌单张的 info.rank 完整（供 moveLabel/记牌器展示，回归：曾显示"单张 undefined"）
+  T('王单张含rank且可命名', (function () {
+    var bj = A([card(16, -1, 0)], 5), sj = A([card(15, -1, 0)], 5);
+    return bj.rank === 16 && sj.rank === 15 && DD.moveLabel(bj) === '单张 大王' && DD.moveLabel(sj) === '单张 小王';
+  })());
 })();
 
 // ---------------- [2] 走法生成 ----------------

@@ -29,6 +29,10 @@
       for (var k in s) if (k in UI.settings) UI.settings[k] = s[k];
       UI.stats = Object.assign({ wins: 0, games: 0 }, JSON.parse(localStorage.getItem('dd_trainer_stats') || '{}'));
     } catch (e) { /* ignore */ }
+    // 窄屏首次使用（无持久化偏好）默认收起抽屉，避免开局即遮挡牌桌
+    try {
+      if (isMobileLayout() && !localStorage.getItem('dd_trainer_settings')) UI.settings.coachOpen = false;
+    } catch (e) { /* ignore */ }
     DD.SFX.enabled = UI.settings.sound !== false;
   }
   function saveSettings() { try { localStorage.setItem('dd_trainer_settings', JSON.stringify(UI.settings)); } catch (e) { /* */ } }
@@ -69,20 +73,23 @@
     var box = $('#counter');
     if (!UI.settings.counter) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
-    if (UI.settings.counterFolded) { box.classList.add('folded'); return; }
+    // 窄屏默认折叠为小 pill（本次会话内点开后保持展开，不覆盖用户桌面端的持久化选择）
+    var folded = UI.settings.counterFolded || (isMobileLayout() && !UI.counterOpenMobile);
+    if (folded) { box.classList.add('folded'); return; }
     box.classList.remove('folded');
+    var acc = function (v) { return UI.playedAcc[v] || 0; };
     var mine = DD.countMap(st.players[HUMAN].hand);
     var part = DD.countMap(st.players[2].hand);
     var html = '<div class="counter-row">';
     var order = [16, 15]; // 王先显示：大王小王合并为“王”
-    html += '<div class="counter-item hot"><b>王</b><span>' + Math.max(0, 4 - UI.playedAcc[16] - UI.playedAcc[15]) + '</span></div>';
+    html += '<div class="counter-item hot"><b>王</b><span>' + Math.max(0, 4 - acc(16) - acc(15)) + '</span></div>';
     // 级牌高亮行
     var lv = st.tableLevel;
-    html += '<div class="counter-item hot"><b>级' + levelT(lv) + '</b><span>' + Math.max(0, 8 - (mine[lv] || 0) - (part[lv] || 0) - (UI.playedAcc[lv] || 0)) + '</span></div>';
+    html += '<div class="counter-item hot"><b>级' + levelT(lv) + '</b><span>' + Math.max(0, 8 - (mine[lv] || 0) - (part[lv] || 0) - acc(lv)) + '</span></div>';
     html += '</div><div class="counter-row">';
     for (var v = 14; v >= 2; v--) {
       if (v === lv) continue;
-      var n = Math.max(0, 8 - (mine[v] || 0) - (part[v] || 0) - (UI.playedAcc[v] || 0));
+      var n = Math.max(0, 8 - (mine[v] || 0) - (part[v] || 0) - acc(v));
       html += '<div class="counter-item"><b>' + (v === 14 ? 'A' : v) + '</b><span>' + n + '</span></div>';
     }
     html += '</div>';
@@ -92,7 +99,7 @@
   // ---------- 座位渲染 ----------
   function seatInfo(idx, st) {
     var p = st.players[idx];
-    var role = p.finished ? '已出完' : (p.team === ME_TEAM ? '队友·农民' : '对手·农民');
+    var role = p.finished ? '已出完' : (p.team === ME_TEAM ? '队友' : '对手');
     if (idx === HUMAN) role = '你';
     return { p: p, role: role };
   }
@@ -103,7 +110,6 @@
     $('#role-' + idx).textContent = si.role;
     $('#count-' + idx).textContent = si.p.finished ? '' : (si.p.count + ' 张');
     seat.classList.toggle('active', !si.p.finished && st.turn === idx);
-    seat.classList.toggle('landlord', false);
   }
   // 对家亮牌小扇形
   function renderFanPartner(st) {
@@ -116,7 +122,15 @@
       var box = $('#fan-' + i);
       box.innerHTML = '';
       var n = st.players[i].count;
-      for (var k = 0; k < n; k++) box.appendChild(el('div', 'card back mini2'));
+      // 动态压缩重叠：扇形总高不超过桌面高的 42%（mini2 背牌固定 22x30）
+      var cardH = 30;
+      var maxH = Math.max(120, Math.round(window.innerHeight * 0.42));
+      var step = n > 1 ? Math.min(16, (maxH - cardH) / (n - 1)) : 0;
+      for (var k = 0; k < n; k++) {
+        var c = el('div', 'card back mini2');
+        if (k > 0) c.style.marginTop = (step - cardH).toFixed(1) + 'px';
+        box.appendChild(c);
+      }
     });
   }
   // 出牌展示
@@ -145,7 +159,7 @@
     clearTimeout(b._t); b._t = setTimeout(function () { b.classList.remove('show'); }, ms || 1800);
   }
   function renderMy(st) {
-    $('#seat-me-name').textContent = '你 · ' + (st.levels[ME_TEAM] >= st.tableLevel ? '' : '');
+    $('#seat-me-name').textContent = '你';
     var rank = st.rank[HUMAN];
     $('#me-rank').textContent = rank > 0 ? UI.orderBadges[rank] : '';
   }
@@ -211,11 +225,14 @@
     var m = $('#center-msg'), last = $('#table-last');
     var myTurn = st.phase === 'playing' && st.turn === HUMAN;
     m.classList.toggle('attention', myTurn);
-    if (st.phase !== 'playing') { m.textContent = ''; last.textContent = ''; return; }
+    if (st.phase !== 'playing') { m.textContent = ''; last.textContent = ''; last.style.display = 'none'; return; }
     var who = st.players[st.turn];
     if (myTurn) m.textContent = '轮到你出牌' + (st.lastPlay ? '' : '（本手先出）');
     else m.textContent = who.name + ' 思考中…';
-    last.textContent = st.lastPlay ? '上家出：「' + DD.moveLabel(st.lastPlay.info) + '」 · ' + st.players[st.lastPlay.playerIdx].name : '';
+    if (st.lastPlay) {
+      last.style.display = '';
+      last.textContent = '上家出：「' + DD.moveLabel(st.lastPlay.info) + '」 · ' + st.players[st.lastPlay.playerIdx].name;
+    } else { last.textContent = ''; last.style.display = 'none'; }
   }
 
   // ---------- 操作 ----------
@@ -463,6 +480,7 @@
     };
     var nm = names[diff];
     UI.selected = {}; UI.advice = null; UI.plans = []; UI.review = ''; UI.selectedPlanKey = null; UI.playedAcc = {};
+    UI.counterOpenMobile = false;
     UI.game = new DD.Game({
       players: [
         { name: '你', type: 'human' },
@@ -510,9 +528,12 @@
     $('#btn-coach-close').addEventListener('click', function (e) { e.stopPropagation(); setCoachOpen(false); });
     $('#coach-fab').addEventListener('click', function () { setCoachOpen(true); });
     $('#side-backdrop').addEventListener('click', function () { setCoachOpen(false); });
-    $('#btn-counter-fold').addEventListener('click', function (e) { e.stopPropagation(); UI.settings.counterFolded = true; saveSettings(); if (UI.game) renderCounter(UI.game.state()); });
-    $('#counter').addEventListener('click', function () { if (UI.settings.counterFolded) { UI.settings.counterFolded = false; saveSettings(); if (UI.game) renderCounter(UI.game.state()); } });
-    window.addEventListener('resize', function () { layoutHand(); renderCoachShell(); checkRotateHint(); });
+    $('#btn-counter-fold').addEventListener('click', function (e) { e.stopPropagation(); UI.settings.counterFolded = true; UI.counterOpenMobile = false; saveSettings(); if (UI.game) renderCounter(UI.game.state()); });
+    $('#counter').addEventListener('click', function () { if (UI.settings.counterFolded || UI.counterOpenMobile !== true) { UI.settings.counterFolded = false; UI.counterOpenMobile = true; saveSettings(); if (UI.game) renderCounter(UI.game.state()); } });
+    window.addEventListener('resize', function () {
+      layoutHand(); renderCoachShell(); checkRotateHint();
+      if (UI.game && !$('#screen-game').classList.contains('hidden')) renderFansOpponents(UI.game.state());
+    });
     $('#btn-rotate-ok').addEventListener('click', function () { UI.settings.rotateDismissed = true; saveSettings(); checkRotateHint(); });
     $('#btn-exit').addEventListener('click', backHome);
     $('#btn-over-home').addEventListener('click', backHome);

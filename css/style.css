@@ -141,7 +141,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 #play-2 { top: 116px; left: 50%; transform: translateX(-50%); }
 #play-1 { right: 4px; top: 34%; }
 #play-3 { left: 4px; top: 34%; }
-#play-0 { bottom: 150px; left: 50%; transform: translateX(-50%); }
+#play-0 { bottom: 212px; left: 50%; transform: translateX(-50%); }
 
 /* 气泡 */
 .bubble { position: absolute; top: -8px; left: 50%; transform: translateX(-50%) scale(.6);
@@ -149,20 +149,21 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   border-radius: 999px; white-space: nowrap; opacity: 0; transition: all .18s; pointer-events: none; z-index: 20; }
 .bubble.show { opacity: 1; transform: translateX(-50%) scale(1); }
 
-/* 中央信息 */
+/* 中央信息（收窄居中；table-last 固定挂在 center-msg 下方 30px，随高度自适应不压出牌区） */
 #center-msg { position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%);
-  font-size: 15px; color: #cfe8da; text-align: center; width: 60%; pointer-events: none; }
+  font-size: 15px; color: #cfe8da; text-align: center; width: auto; max-width: min(420px, 46%); pointer-events: none; }
 #center-msg.attention { color: #ffe9a8; animation: textPulse 1.2s ease-in-out infinite; }
-#table-last { position: absolute; top: 58%; left: 50%; transform: translateX(-50%); font-size: 12px; pointer-events: none; }
+#table-last { position: absolute; top: calc(44% + 30px); left: 50%; transform: translateX(-50%); font-size: 12px; pointer-events: none;
+  background: rgba(0,0,0,.35); padding: 2px 12px; border-radius: 999px; max-width: 56%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes textPulse { 0%,100% { opacity: .85; } 50% { opacity: 1; text-shadow: 0 0 14px rgba(255,215,106,.5); } }
 
-/* 我自己 */
-#me-bar { position: absolute; bottom: 74px; left: 50%; transform: translateX(-50%); z-index: 9;
+/* 我自己（底部四件套纵向泳道：hand 8 → combo-label 92 → me-bar 116 → actions 158 → play-0 212） */
+#me-bar { position: absolute; bottom: 116px; left: 50%; transform: translateX(-50%); z-index: 9;
   display: flex; align-items: center; gap: 8px; font-size: 13px;
   background: rgba(0,0,0,.3); padding: 3px 12px; border-radius: 999px; }
 #me-bar .avatar { width: 26px; height: 26px; border-radius: 50%; background: #1d5c3f; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 .me-rank { color: var(--c-accent); }
-#combo-label { position: absolute; bottom: 42px; left: 50%; transform: translateX(-50%);
+#combo-label { position: absolute; bottom: 92px; left: 50%; transform: translateX(-50%);
   z-index: 9; font-size: 12px; white-space: nowrap; }
 
 /* 手牌 */
@@ -173,7 +174,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 #hand .card.hinted { box-shadow: 0 0 0 3px var(--c-accent), 0 4px 10px rgba(0,0,0,.4); }
 
 /* 操作按钮 */
-#actions { position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+#actions { position: absolute; bottom: 158px; left: 50%; transform: translateX(-50%);
   z-index: 11; display: flex; gap: 14px; align-items: center; }
 #actions:not(.hidden) { animation: slideUp .22s ease-out; }
 .act-btn { min-width: 96px; padding: 9px 14px; font-size: 14px; letter-spacing: 2px;
@@ -184,8 +185,8 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 #btn-pass.pulse { animation: passPulse 1.1s ease-in-out infinite; border-color: var(--c-accent); color: #ffe9a8; }
 @keyframes passPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,215,106,0); } 50% { box-shadow: 0 0 16px 3px rgba(255,215,106,.5); } }
 
-/* 记牌器（右上角，与教练 FAB 分区不重叠） */
-#counter { position: absolute; top: 8px; right: 8px; z-index: 12;
+/* 记牌器（右上角；desktop 轻度缩放避免压到对家牌） */
+#counter { position: absolute; top: 8px; right: 8px; z-index: 12; zoom: .88;
   background: rgba(0,0,0,.5); border-radius: 10px; padding: 6px 8px; border: 1px solid rgba(255,255,255,.12); }
 .counter-title { font-size: 10.5px; margin-bottom: 4px; }
 .counter-row { display: flex; gap: 3px; flex-wrap: wrap; }
@@ -314,10 +315,10 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 /* ================= 桌面默认微调 ================= */
 @media (min-width: 1025px) {
   :root { --card-w: 52px; --card-h: 74px; --card-overlap: -20px; }
-  #play-0 { bottom: 158px; }
-  #combo-label { bottom: 46px; }
-  #me-bar { bottom: 80px; }
-  #actions { bottom: 76px; }
+  #play-0 { bottom: 212px; }
+  #combo-label { bottom: 92px; }
+  #me-bar { bottom: 116px; }
+  #actions { bottom: 158px; }
   #play-1, #play-3 { top: 30%; }
 }
 /* 大屏放大 */
@@ -325,7 +326,10 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   :root { --card-w: 60px; --card-h: 86px; }
   .pseat.top .p-fan .card { margin-left: -20px; }
   .card.small { width: 34px; height: 48px; }
-  #play-0 { bottom: 168px; }
+  #play-0 { bottom: 232px; }
+  #combo-label { bottom: 102px; }
+  #me-bar { bottom: 128px; }
+  #actions { bottom: 172px; }
 }
 
 /* ================= 窄屏（≤1024：抽屉 + 压缩座位 + 竖屏兜底共用） ================= */
@@ -349,20 +353,35 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   #play-3, #play-1 { top: 26%; }
   .played-cards .card { margin-left: -13px; }
   #center-msg { font-size: 13px; }
-  #counter { top: 4px; right: 2px; transform-origin: top right; zoom: .9; }
-  #me-bar { bottom: 62px; font-size: 11px; }
+  #counter { top: 4px; right: 2px; transform-origin: top right; zoom: .85; }
+  #me-bar { bottom: 90px; font-size: 11px; }
   #hand { bottom: 4px; }
-  #combo-label { bottom: 46px; font-size: 11px; }
-  #actions { bottom: 60px; gap: 10px; }
+  #combo-label { bottom: 64px; font-size: 11px; }
+  #actions { bottom: 132px; gap: 10px; }
+  #play-0 { bottom: 178px; }
   .act-btn { min-width: 86px; padding: 8px 10px; font-size: 13px; }
   #coach-fab { bottom: 120px; right: 8px; width: 48px; height: 48px; font-size: 22px; }
 }
-/* 横屏手机精调 */
+/* 横屏手机精调（高度紧张：隐藏 table-last——各出牌区已有牌型标签；
+   me-bar 移出中央泳道到左下角，中央留给 play-0/actions/combo-label） */
 @media (max-width: 1024px) and (max-height: 560px) {
-  #play-2 { top: 72px; }
+  #play-2 { top: 64px; }
   #play-1, #play-3 { top: 20%; }
   #play-0 { bottom: 132px; }
-  .pseat.left .p-fan, .pseat.right .p-fan { max-height: 220px; overflow: hidden; }
+  #combo-label { bottom: 66px; }
+  #me-bar { bottom: 66px; left: 8px; transform: none; }
+  #actions { bottom: 88px; }
+  #table-last { display: none; }
+  .pseat.left .p-fan, .pseat.right .p-fan { max-height: 42vh; overflow: hidden; }
+}
+/* 超矮视口（H≤380）：整体再压缩一档，保住中央泳道 */
+@media (max-width: 1024px) and (max-height: 380px) {
+  :root { --card-w: 36px; --card-h: 50px; }
+  #center-msg { top: 42%; }
+  #play-2 { top: 56px; }
+  #play-0 { bottom: 128px; }
+  #combo-label { bottom: 56px; }
+  #actions { bottom: 78px; }
 }
 
 /* 主页：横屏双栏 */

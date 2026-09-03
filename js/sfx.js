@@ -1,7 +1,7 @@
 /* =========================================================
- * 斗地主 AI 训练营 · sfx.js
+ * 掼蛋 AI 训练营 · sfx.js
  * 轻量合成音效：WebAudio 实时生成，无任何音频素材文件
- *   play  出牌"嗒"   pass 过牌低音   bid 叫分双音
+ *   play  出牌"嗒"   pass 过牌低音
  *   bomb  炸弹低频爆响 + 噪声        click/hint 按钮/提示
  *   win   胜利上行琶音               lose 失败下行音
  * 可通过 DD.SFX.enabled（设置持久化）一键开关；
@@ -95,10 +95,6 @@
   var LIB = {
     play: function () { tone({ freq: 520, slideTo: 340, dur: 0.07, type: 'triangle', vol: 0.32 }); },
     pass: function () { tone({ freq: 220, dur: 0.08, type: 'sine', vol: 0.22 }); },
-    bid: function () {
-      tone({ freq: 660, dur: 0.08, type: 'triangle', vol: 0.28 });
-      tone({ freq: 880, dur: 0.1, type: 'triangle', vol: 0.28, delay: 0.09 });
-    },
     bomb: function () { boomSound(); },
     click: function () { tone({ freq: 700, dur: 0.035, type: 'square', vol: 0.1 }); },
     hint: function () { tone({ freq: 980, dur: 0.06, type: 'sine', vol: 0.18 }); },

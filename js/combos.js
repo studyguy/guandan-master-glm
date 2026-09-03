@@ -86,9 +86,9 @@
       if (cards.length !== jk.length) return null; // 王不能与普通牌混搭（除四王炸本身）
       var cntJ = DD.countMap(jk);
       if (cntJ[16] === 2 && cntJ[15] === 2) return mk('FOUR_JOKER', 100, { len: 4 });
-      if (n === 1) return mk('SINGLE', DD.effOf(jk[0].v, level));
+      if (n === 1) return mk('SINGLE', DD.effOf(jk[0].v, level), { rank: jk[0].v });
       if (DD.RULES.jokerPair && n === 2 && (cntJ[15] === 2 || cntJ[16] === 2)) {
-        return mk('PAIR', DD.effOf(jk[0].v, level));
+        return mk('PAIR', DD.effOf(jk[0].v, level), { rank: jk[0].v });
       }
       return null; // 3 王、1大1小等非法
     }
