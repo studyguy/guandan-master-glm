@@ -154,18 +154,28 @@
       take(cards); addGroup('同顺', cards);
     }
 
-    // 三张 / 对子 / 单张：按剩余点数归组，组内点数升序
-    addGroup('三张', hand.filter(function (c) { return c.s >= 0 && !isUsed(c) && (byV[c.v] || []).length === 3; }));
-    addGroup('对子', hand.filter(function (c) { return c.s >= 0 && !isUsed(c) && (byV[c.v] || []).length === 2; }));
-    addGroup('单张', hand.filter(function (c) { return c.s >= 0 && !isUsed(c) && (byV[c.v] || []).length === 1; }));
+    // 三张 / 对子 / 单张：每个点数各一列（按剩余张数动态归类）
+    function remainCount(v) {
+      var n = 0;
+      hand.forEach(function (c) { if (c.s >= 0 && !isUsed(c) && c.v === v) n++; });
+      return n;
+    }
+    [['三张', 3], ['对子', 2], ['单张', 1]].forEach(function (spec) {
+      for (var v = 2; v <= 14; v++) {
+        if (remainCount(v) === spec[1]) {
+          var cards = hand.filter(function (c) { return c.s >= 0 && !isUsed(c) && c.v === v; });
+          addGroup(spec[0], cards);
+        }
+      }
+    });
 
-    // 展平 + 分组起始标记
+    // 展平 + 分组起始标记（横向兼容接口）；columns 供纵向列渲染
     var cards = [], marks = [];
     groups.forEach(function (g) {
       if (cards.length) marks.push({ idx: cards.length, tag: g.tag });
       g.cards.forEach(function (c) { cards.push(c); });
     });
-    return { cards: cards, marks: marks };
+    return { columns: groups, cards: cards, marks: marks };
   };
 
   function enemyMin(view) {

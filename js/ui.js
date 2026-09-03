@@ -185,38 +185,49 @@
     var rank = st.rank[HUMAN];
     $('#me-rank').textContent = rank > 0 ? UI.orderBadges[rank] : '';
   }
+  // 当前理牌模式的列结构：每列 = 同点数一叠（纵向排列）；智能理牌时按
+  // 王→炸弹→同花色连张(同顺)→三张→对子→单张 分组，组间留间隔
+  function handColumns(st) {
+    if (UI.settings.sortMode === 'smart') {
+      return DD.arrangeHandSmart(st.players[HUMAN].hand, st.tableLevel).columns.map(function (col) {
+        return { tag: col.tag, cards: col.cards.slice() };
+      });
+    }
+    var sorted = DD.sortByLevel(st.players[HUMAN].hand, st.tableLevel);
+    var cols = [];
+    sorted.forEach(function (c) {
+      var eff = DD.effOf(c.v, st.tableLevel);
+      if (!cols.length || cols[cols.length - 1].eff !== eff) cols.push({ eff: eff, tag: '', cards: [] });
+      cols[cols.length - 1].cards.push(c);
+    });
+    return cols.map(function (col) { return { tag: '', cards: col.cards }; });
+  }
+
   function renderHand(st) {
     var box = $('#hand');
     box.innerHTML = '';
-    var raw = st.players[HUMAN].hand;
-    var sorted, marks = [];
-    if (UI.settings.sortMode === 'smart') {
-      // 智能理牌：王→炸弹→同花色连张(同顺)→三张→对子→单张，组间留间隔
-      var r = DD.arrangeHandSmart(raw, st.tableLevel);
-      sorted = r.cards; marks = r.marks;
-    } else {
-      sorted = DD.sortByLevel(raw, st.tableLevel);
-    }
-    var markByIdx = {};
-    marks.forEach(function (m) { markByIdx[m.idx] = m; });
-    sorted.forEach(function (c, idx) {
-      var e = cardEl(c, false);
-      if (UI.selected[c.id]) e.classList.add('sel');
-      var m = markByIdx[idx];
-      if (m) {
-        e.dataset.gap = '1';
-        if (m.tag === '同顺') e.classList.add('tongshun'); // 同花色连张徽章（同花顺机会）
-      }
-      e.addEventListener('click', function () {
-        var now = Date.now();
-        if (UI._lastTap && UI._lastTap.id === c.id && now - UI._lastTap.t < 350) { UI._lastTap = null; quickPlay(c); return; }
-        UI._lastTap = { id: c.id, t: now };
-        UI.selectedPlanKey = null; clearHint();
-        if (UI.selected[c.id]) { delete UI.selected[c.id]; e.classList.remove('sel'); }
-        else { UI.selected[c.id] = c; e.classList.add('sel'); }
-        updateComboLabel(st);
+    var cols = handColumns(st);
+    var smart = UI.settings.sortMode === 'smart';
+    cols.forEach(function (col, ci) {
+      var colDiv = el('div', 'hcol');
+      col.cards.sort(function (a, b) { return a.s - b.s || a.d - b.d; });
+      col.cards.forEach(function (c, k) {
+        var e = cardEl(c, false);
+        if (UI.selected[c.id]) e.classList.add('sel');
+        if (col.tag === '同顺' && k === col.cards.length - 1) e.classList.add('tongshun');
+        e.addEventListener('click', function () {
+          var now = Date.now();
+          if (UI._lastTap && UI._lastTap.id === c.id && now - UI._lastTap.t < 350) { UI._lastTap = null; quickPlay(c); return; }
+          UI._lastTap = { id: c.id, t: now };
+          UI.selectedPlanKey = null; clearHint();
+          if (UI.selected[c.id]) { delete UI.selected[c.id]; e.classList.remove('sel'); }
+          else { UI.selected[c.id] = c; e.classList.add('sel'); }
+          updateComboLabel(st);
+        });
+        colDiv.appendChild(e);
       });
-      box.appendChild(e);
+      if (ci > 0 && smart && cols[ci - 1].tag !== col.tag) colDiv.dataset.gap = '1';
+      box.appendChild(colDiv);
     });
     layoutHand();
   }
@@ -227,16 +238,23 @@
     var table = document.getElementById('table');
     var tw = table && table.clientWidth ? table.clientWidth : window.innerWidth;
     var avail = Math.max(cw, tw - 24);
-    // 分组间隔计入总宽预算，保证理牌组不把整行撑出牌桌
-    var gapExtra = Math.max(8, cw * 0.22);
+    // 理牌分组间隔计入总宽预算，保证分组不把整列撑出牌桌
+    var gapExtra = Math.max(10, cw * 0.35);
     var extras = 0;
     for (var g = 1; g < n; g++) if (box.children[g].dataset && box.children[g].dataset.gap) extras += gapExtra;
-    var shift = n > 1 ? Math.min(cw * 0.55, (avail - cw - extras) / (n - 1) + cw) : 0;
+    var pitch = n > 1 ? Math.max(cw * 0.55, Math.min(cw + 6, (avail - n * cw - extras) / (n - 1) + cw)) : cw;
     for (var i = 0; i < n; i++) {
       var node = box.children[i];
       var extra = node.dataset && node.dataset.gap ? gapExtra : 0;
-      node.style.marginLeft = i === 0 ? '0px' : (shift - cw + extra).toFixed(1) + 'px';
+      node.style.marginLeft = i === 0 ? '0px' : (pitch - cw + extra).toFixed(1) + 'px';
     }
+    // 纵向叠牌高度告知泳道系统：手牌上方的间距随最高列自适应
+    var stackH = 0;
+    for (var j = 0; j < n; j++) {
+      var h = box.children[j].offsetHeight - cw * 1.42;
+      if (h > stackH) stackH = h;
+    }
+    document.documentElement.style.setProperty('--stack-h', Math.max(0, Math.round(stackH)) + 'px');
   }
 
   function getSelected() { return Object.keys(UI.selected).map(function (k) { return UI.selected[k]; }); }

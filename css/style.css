@@ -18,7 +18,7 @@ html, body { height: 100%; overscroll-behavior: none; }
   --card-w: 44px; --card-h: calc(var(--card-w) * 1.42); --card-overlap: calc(var(--card-w) * -0.4);
   /* 底部纵向泳道（hand → combo-label → me-bar → actions → play-0）随卡牌等比伸缩 */
   --lane-hand: 8px;
-  --lane-combo: calc(var(--lane-hand) + var(--card-h) + 0.16 * var(--card-w));
+  --lane-combo: calc(var(--lane-hand) + var(--card-h) + var(--stack-h, 0px) + 0.16 * var(--card-w));
   --lane-me: calc(var(--lane-combo) + 0.45 * var(--card-w));
   --lane-actions: calc(var(--lane-me) + 0.95 * var(--card-w));
   --lane-play0: calc(var(--lane-actions) + 1.05 * var(--card-w));
@@ -185,8 +185,10 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 #combo-label { position: absolute; bottom: var(--lane-combo); left: 50%; transform: translateX(-50%);
   z-index: 9; font-size: clamp(12px, 1.25vmin + 2px, 18px); white-space: nowrap; }
 
-/* 手牌 */
-#hand { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; }
+/* 手牌（纵向列排列：同点数一列叠放，列间留缝；炸弹=高列一眼可判） */
+#hand { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; align-items: flex-end; }
+#hand .hcol { display: flex; flex-direction: column; align-items: center; }
+#hand .hcol .card + .card { margin-top: calc(var(--card-h) * -0.74); }
 #hand .card { box-shadow: 0 2px 6px rgba(0,0,0,.4); transition: transform .1s, box-shadow .1s; }
 #hand .card:hover { transform: translateY(-6px); }
 #hand .card.sel { transform: translateY(-18px); box-shadow: 0 8px 16px rgba(0,0,0,.45); }
