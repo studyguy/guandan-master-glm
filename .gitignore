@@ -3,3 +3,4 @@ npm-debug.log*
 shots/
 *.log
 .zcode/
+.DS_Store
