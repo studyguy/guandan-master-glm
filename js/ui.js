@@ -207,44 +207,59 @@
 
   function renderHand(st) {
     var box = $('#hand');
+    // 以旧牌实测高度推导"每列最多几张"：列高不超过视口高的约 1/3，
+    // 一列摆不下的组自动横向拆成 2~3 列（组间留大间隔区分）
+    var oldCard = box.querySelector('.card');
+    var cardH = oldCard ? oldCard.offsetHeight : Math.round(innerHeight * 0.14);
+    var strip = Math.max(12, Math.round(cardH * 0.28));
+    var riseCap = Math.min(120, Math.round(innerHeight * 0.32));
+    var maxPerCol = Math.max(2, Math.min(6, Math.floor(riseCap / strip) + 1));
     box.innerHTML = '';
-    var cols = handColumns(st);
-    cols.forEach(function (col, ci) {
+    var flat = []; // {tag, cards, newGroup}
+    handColumns(st).forEach(function (g, gi) {
+      var cards = g.cards.slice();
+      cards.sort(function (a, b) { return a.s - b.s || a.d - b.d; });
+      for (var i = 0; i < cards.length; i += maxPerCol) {
+        flat.push({ tag: g.tag, cards: cards.slice(i, i + maxPerCol), newGroup: i === 0 && gi > 0 });
+      }
+    });
+    flat.forEach(function (col, ci) {
       var colDiv = el('div', 'hcol' + (col.tag === '锁' ? ' locked' : ''));
-      col.cards.sort(function (a, b) { return a.s - b.s || a.d - b.d; });
+      if (col.newGroup) colDiv.dataset.gap = '1';
       col.cards.forEach(function (c, k) {
         var e = cardEl(c, false);
         if (UI.selected[c.id]) e.classList.add('sel');
         if (UI.locked[c.id]) e.classList.add('locked');
-        if (col.tag === '同顺' && k === col.cards.length - 1) e.classList.add('tongshun');
+        var isGroupEnd = col.tag === '同顺' && k === col.cards.length - 1 &&
+          (ci + 1 >= flat.length || flat[ci + 1].tag !== '同顺');
+        if (isGroupEnd) e.classList.add('tongshun');
         e.addEventListener('click', function () {
           if (UI._lpFired === c.id) { UI._lpFired = null; return; } // 长按锁牌后吞掉本次点击
           var now = Date.now();
-          if (UI._lastTap && UI._lastTap.id === c.id && now - UI._lastTap.t < 350) { UI._lastTap = null; quickPlay(c); return; }
-          UI._lastTap = { id: c.id, t: now };
+          // 双击同一列：快速出整列（如同点数列直接出 对/三/炸）
+          if (UI._lastTap && UI._lastTap.col === ci && now - UI._lastTap.t < 350) {
+            UI._lastTap = null;
+            quickPlay(col.cards.slice(), st);
+            return;
+          }
+          UI._lastTap = { col: ci, t: now };
           var wasArmed = UI.selectedPlanKey != null;
           UI.selectedPlanKey = null; clearHint();
           if (wasArmed) renderPlans(UI.game.viewFor(HUMAN));
-          if (UI.selected[c.id]) { delete UI.selected[c.id]; e.classList.remove('sel'); DD.SFX && DD.SFX.play('deselect'); }
-          else { UI.selected[c.id] = c; e.classList.add('sel'); DD.SFX && DD.SFX.play('select', Object.keys(UI.selected).length); }
+          // 整列选中：点列内任一张 = 一次性选中该列全部；已整列选中时点单张 = 只保留该张
+          var allSel = col.cards.every(function (cc) { return UI.selected[cc.id]; });
+          if (!allSel) {
+            col.cards.forEach(function (cc) { UI.selected[cc.id] = cc; });
+            DD.SFX && DD.SFX.play('select', col.cards.length);
+          } else {
+            delete UI.selected[c.id];
+            DD.SFX && DD.SFX.play('deselect');
+          }
+          renderHand(st);
           updateComboLabel(st);
-        });
-        // 锁牌：桌面右键 / 移动端长按 500ms（锁定后恒定排在牌堆最左）
-        e.addEventListener('contextmenu', function (ev) {
-          ev.preventDefault();
-          if (Date.now() - (UI._lastLockAt || 0) < 800) return; // 长按已处理，避免 contextmenu 二次触发
-          toggleLock(c, st);
-        });
-        e.addEventListener('pointerdown', function () {
-          clearTimeout(e._lpTimer);
-          e._lpTimer = setTimeout(function () { UI._lpFired = c.id; UI._lastLockAt = Date.now(); toggleLock(c, st); }, 500);
-        });
-        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (evName) {
-          e.addEventListener(evName, function () { clearTimeout(e._lpTimer); });
         });
         colDiv.appendChild(e);
       });
-      if (ci > 0 && cols[ci - 1].tag !== col.tag) colDiv.dataset.gap = '1';
       box.appendChild(colDiv);
     });
     layoutHand();
@@ -269,11 +284,16 @@
     if (pitch < cw * 0.38) { gapUnit = gapFull * 0.5; pitch = pitchFor(gapUnit); }
     if (pitch < cw * 0.38) { gapUnit = 0; pitch = pitchFor(gapUnit); }
     pitch = Math.max(cw * 0.38, Math.min(pitch, cw + 6));
+    var maxRise = 0;
     for (var i = 0; i < n; i++) {
       var node = box.children[i];
       var extra = node.dataset && node.dataset.gap ? gapUnit : 0;
       node.style.marginLeft = i === 0 ? '0px' : (pitch - cw + extra).toFixed(1) + 'px';
+      var rise = node.offsetHeight - cw * 1.42;
+      if (rise > maxRise) maxRise = rise;
     }
+    // 按钮区动态避让：随手牌最高列上浮（封顶 120px，极端手牌也不侵入中央区）
+    document.documentElement.style.setProperty('--hand-rise', Math.min(120, Math.max(0, Math.round(maxRise))) + 'px');
   }
 
   function getSelected() { return Object.keys(UI.selected).map(function (k) { return UI.selected[k]; }); }
@@ -290,15 +310,21 @@
       lab.innerHTML = '已选：<b>' + ev.label + '</b> ' + (view.lastPlay && enemyTop ? '<span class="ok">✓ 压得上家</span>' : '<span class="ok">✓ 可出</span>');
     } else { lab.innerHTML = '<span class="warn">✗ ' + ev.msg + '</span>'; }
   }
-  function quickPlay(card) {
+  function quickPlay(cards) {
+    if (!cards || !cards.length) return;
     var st = UI.game.state();
     if (st.phase !== 'playing' || st.turn !== HUMAN) return;
     var view = UI.game.viewFor(HUMAN);
-    var ev = DD.evaluateSelection([card], view);
-    if (ev.ok && UI.game.humanMove({ cards: [card], info: ev.info })) { UI.review = DD.reviewPlay(ev.info, UI.advice) || ''; UI.selected = {}; UI.selectedPlanKey = null; return; }
-    UI.selected = {}; UI.selected[card.id] = card;
+    var ev = DD.evaluateSelection(cards, view);
+    if (ev.ok && UI.game.humanMove({ cards: cards, info: ev.info })) {
+      UI.review = DD.reviewPlay(ev.info, UI.advice) || ''; UI.selected = {}; UI.selectedPlanKey = null;
+      renderHand(st); updateComboLabel(st);
+      return;
+    }
+    // 不合法则回落为整组选中，让用户看到原因后手动调整
+    UI.selected = {}; cards.forEach(function (c) { UI.selected[c.id] = c; });
     renderHand(st); updateComboLabel(st);
-    if (!ev.ok) toast(ev.msg, 'warn');
+    toast(ev && ev.msg ? ev.msg : '这样出不了', 'warn');
   }
 
   // ---------- 顶部信息 ----------

@@ -20,7 +20,7 @@ html, body { height: 100%; overscroll-behavior: none; }
   --lane-hand: 8px;
   --lane-combo: calc(var(--lane-hand) + var(--card-h) + 0.16 * var(--card-w));
   --lane-me: calc(var(--lane-combo) + 0.45 * var(--card-w));
-  --lane-actions: calc(var(--lane-combo) + 1.31 * var(--card-w));
+  --lane-actions: calc(var(--lane-hand) + var(--card-h) + var(--hand-rise, 0px) + 0.2 * var(--card-w));
   --lane-play0: calc(var(--lane-actions) + 0.8 * var(--card-w));
   --side-w: clamp(300px, 23vw, 440px);
 }
