@@ -30,10 +30,6 @@
     $('#btn-game-tutorial').addEventListener('click', function () { $('#modal-tutorial').classList.remove('hidden'); });
     $('#btn-home-coach').addEventListener('click', function () { DD.UI.settings.coach = !DD.UI.settings.coach; save(); renderToggles(); });
     $('#btn-home-counter').addEventListener('click', function () { DD.UI.settings.counter = !DD.UI.settings.counter; save(); renderToggles(); });
-    $('#btn-home-sound').addEventListener('click', function () {
-      DD.UI.settings.sound = !DD.UI.settings.sound; DD.SFX.enabled = DD.UI.settings.sound; save(); renderToggles();
-      if (DD.UI.settings.sound) DD.SFX.play('click');
-    });
     $('#btn-tutorial-close').addEventListener('click', function () { $('#modal-tutorial').classList.add('hidden'); });
     renderToggles();
   }
@@ -42,7 +38,6 @@
     var s = DD.UI.settings;
     $('#btn-home-coach').textContent = '🎓 AI 教练：' + (s.coach ? '开' : '关');
     $('#btn-home-counter').textContent = '🔍 记牌器：' + (s.counter ? '开' : '关');
-    $('#btn-home-sound').textContent = (s.sound ? '🔊' : '🔇') + ' 音效：' + (s.sound ? '开' : '关');
   }
   function save() { localStorage.setItem('dd_trainer_settings', JSON.stringify(DD.UI.settings)); }
 

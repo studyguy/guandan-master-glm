@@ -20,8 +20,8 @@ html, body { height: 100%; overscroll-behavior: none; }
   --lane-hand: 8px;
   --lane-combo: calc(var(--lane-hand) + var(--card-h) + 0.16 * var(--card-w));
   --lane-me: calc(var(--lane-combo) + 0.45 * var(--card-w));
-  --lane-actions: calc(var(--lane-combo) + 0.45 * var(--card-w));
-  --lane-play0: calc(var(--lane-actions) + 0.75 * var(--card-w));
+  --lane-actions: calc(var(--lane-combo) + 1.31 * var(--card-w));
+  --lane-play0: calc(var(--lane-actions) + 0.8 * var(--card-w));
   --side-w: clamp(300px, 23vw, 440px);
 }
 * { -webkit-tap-highlight-color: transparent; }
@@ -168,11 +168,11 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 .bubble.show { opacity: 1; transform: translateX(-50%) scale(1); }
 
 /* 中央信息（收窄居中；table-last 固定挂在 center-msg 下方 30px，随高度自适应不压出牌区） */
-#center-msg { position: absolute; top: calc(var(--card-h) * 2.4 + var(--card-w) * 0.35); left: 50%; transform: translateX(-50%);
+#center-msg { position: absolute; top: calc(var(--card-h) * 2.4 + var(--card-w) * 0.35); left: 50%; transform: translateX(-50%); z-index: 6;
   font-size: clamp(15px, 1.75vmin + 4px, 26px); color: #cfe8da; text-align: center; width: auto; max-width: min(460px, 46%); pointer-events: none;
   background: rgba(0,0,0,.32); padding: 2px 16px; border-radius: 999px; white-space: nowrap; }
 #center-msg.attention { color: #ffe9a8; animation: textPulse 1.2s ease-in-out infinite; }
-#table-last { position: absolute; top: calc(var(--card-h) * 2.4 + var(--card-w) * 0.35 + 34px); left: 50%; transform: translateX(-50%); font-size: clamp(12px, 1.3vmin + 3px, 20px); pointer-events: none;
+#table-last { position: absolute; top: calc(var(--card-h) * 2.4 + var(--card-w) * 0.35 + 34px); left: 50%; transform: translateX(-50%); font-size: clamp(12px, 1.3vmin + 3px, 20px); pointer-events: none; z-index: 6;
   background: rgba(0,0,0,.35); padding: 2px 12px; border-radius: 999px; max-width: 56%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes textPulse { 0%,100% { opacity: .85; } 50% { opacity: 1; text-shadow: 0 0 14px rgba(255,215,106,.5); } }
 
@@ -188,7 +188,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 /* 手牌（纵向列排列：同点数一列叠放，列间留缝；炸弹=高列一眼可判） */
 #hand { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; align-items: flex-end; }
 #hand .hcol { display: flex; flex-direction: column; align-items: center; }
-#hand .hcol .card + .card { margin-top: calc(var(--card-h) * -0.5); }
+#hand .hcol .card + .card { margin-top: calc(var(--card-h) * -0.72); } /* 只露牌角（牌号+花色） */
 #hand .card { box-shadow: 0 2px 6px rgba(0,0,0,.4); transition: transform .1s, box-shadow .1s; }
 #hand .card:hover { transform: translateY(-6px); }
 #hand .card.sel { transform: translateY(-18px); box-shadow: 0 8px 16px rgba(0,0,0,.45); }

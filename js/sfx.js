@@ -13,16 +13,10 @@
   var DD = root.DD = root.DD || {};
 
   var SFX = DD.SFX = {
+    enabled: true,
     _ctx: null,
     _master: null
   };
-  // enabled 用存取器实现：切换音效开关时同步暂停/续播背景音乐
-  var _bgmSync = function () {};
-  Object.defineProperty(SFX, 'enabled', {
-    get: function () { return SFX._enabled !== false; },
-    set: function (v) { SFX._enabled = v !== false; _bgmSync(); }
-  });
-  SFX._enabled = true;
 
   function getCtx() {
     if (SFX._ctx) return SFX._ctx;
@@ -47,27 +41,25 @@
     };
     document.addEventListener('pointerdown', unlock);
     document.addEventListener('keydown', unlock);
-    // ===== 背景音乐 BGM：循环播放，跟随 enabled 开关 =====
+    // ===== 背景音乐 BGM：循环常开；启动即尝试自动播放，
+    // 被浏览器自动播放策略拦截时，首次用户手势自动续播 =====
     var bgm = null;
     try {
       bgm = new Audio('music/bgm.mp3');
       bgm.loop = true;
-      bgm.volume = 0.35;
+      bgm.volume = 0.245; // 原音量的 70%
     } catch (e) { bgm = null; }
     function bgmSync() {
       if (!bgm) return;
-      if (SFX.enabled) { bgm.play().catch(function () { /* 等待首次用户手势 */ }); }
-      else bgm.pause();
+      bgm.play().catch(function () { /* 等待首次用户手势 */ });
     }
     DD.BGM = {
       play: function () { bgmSync(); },
       pause: function () { if (bgm) bgm.pause(); }
     };
-    // 启动即尝试自动播放；被自动播放策略拦截时，首次用户手势自动续播
-    var bgmKick = function () { _bgmSync(); };
+    var bgmKick = function () { bgmSync(); };
     document.addEventListener('pointerdown', bgmKick);
     document.addEventListener('keydown', bgmKick);
-    _bgmSync = function () { bgmSync(); };
     bgmSync();
   }
 

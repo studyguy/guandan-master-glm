@@ -13,7 +13,7 @@
   var ME_TEAM = 0;
 
   var UI = DD.UI = {
-    settings: { difficulty: 'easy', coach: true, counter: true, sound: true, counterFolded: false, rotateDismissed: false, sortMode: 'smart' },
+    settings: { difficulty: 'easy', coach: true, counter: true, counterFolded: false, rotateDismissed: false, sortMode: 'smart' },
     game: null,
     selected: {}, advice: null, plans: [],
     selectedPlanKey: null, review: '', analysisOpen: false,
@@ -34,7 +34,6 @@
       if (UI.settings.sortMode === 'suit') UI.settings.sortMode = 'smart';
       delete UI.settings.coachOpen;
     } catch (e) { /* ignore */ }
-    DD.SFX.enabled = UI.settings.sound !== false;
   }
   function saveSettings() { try { localStorage.setItem('dd_trainer_settings', JSON.stringify(UI.settings)); } catch (e) { /* */ } }
   function saveStats() { try { localStorage.setItem('dd_trainer_stats', JSON.stringify(UI.stats)); } catch (e) { /* */ } }
@@ -620,11 +619,6 @@
     $('#btn-sess-home').addEventListener('click', backHome);
     $('#btn-sess-again').addEventListener('click', startGame);
     $('#btn-next').addEventListener('click', function () { $('#modal-over').classList.add('hidden'); clearPlays(); UI.selected = {}; UI.review = ''; UI.game.nextGame(); });
-    $('#btn-sound-toggle').addEventListener('click', function () {
-      UI.settings.sound = !UI.settings.sound; DD.SFX.enabled = UI.settings.sound; saveSettings();
-      this.textContent = (UI.settings.sound ? '🔊' : '🔇') + ' 音效';
-      if (UI.settings.sound) DD.SFX.play('click');
-    });
     $('#btn-counter-toggle').addEventListener('click', function () {
       UI.settings.counter = !UI.settings.counter; saveSettings();
       this.textContent = '🔍 记牌器' + (UI.settings.counter ? '' : '：关');
@@ -643,7 +637,6 @@
       if (UI.game) renderHand(UI.game.state());
     });
     $('#btn-sort-toggle').textContent = UI.settings.sortMode === 'smart' ? '↩ 恢复理牌' : '🔀 智能理牌';
-    $('#btn-sound-toggle').textContent = '🔊 音效';
     $('#btn-counter-toggle').textContent = '🔍 记牌器';
     $('#btn-coach-toggle').textContent = '🎓 教练';
     // 快捷键
