@@ -184,16 +184,10 @@
    * @param lockedMap 锁牌表（id→true）：锁牌恒为最左一列，不受排序影响
    * @returns {{columns: Array<{tag:string, cards:Array}>}}
    */
-  DD.arrangeHandColumns = function (hand, level, mode, lockedMap) {
-    lockedMap = lockedMap || {};
+  DD.arrangeHandColumns = function (hand, level, mode) {
     function byVD(a, b) { return a.v - b.v || a.s - b.s || a.d - b.d; }
     var columns = [];
-
-    // 锁牌列恒定最左：单列纵向排放，内部按点数升序
-    var locked = hand.filter(function (c) { return lockedMap[c.id]; }).sort(byVD);
-    if (locked.length) columns.push({ tag: '锁', cards: locked });
-
-    var rest = hand.filter(function (c) { return !lockedMap[c.id]; });
+    var rest = hand;
 
     if (mode === 'suit') {
       // 按花色：♠ ♥ ♣ ♦ 各成一列连排，王列最右

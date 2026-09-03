@@ -75,14 +75,7 @@ console.log('[1] 牌型/压制/万能配');
     return bj.rank === 16 && sj.rank === 15 && DD.moveLabel(bj) === '单张 大王' && DD.moveLabel(sj) === '单张 小王';
   })());
 
-  // 理牌列结构（三模式 + 锁牌恒左）
-  T('理牌列：锁牌恒最左单列', (function () {
-    var hand = mk([[3, 0], [3, 1], [9, 2], [5, 0], [16, -1], [15, -1]]);
-    var lock = {}; lock['9-2-0'] = 1; // 锁 ♣9
-    var r = DD.arrangeHandColumns(hand, 2, 'smart', lock);
-    var first = r.columns[0];
-    return first.tag === '锁' && first.cards.length === 1 && first.cards[0].id === '9-2-0';
-  })());
+  // 理牌列结构（三模式）
   T('花色理牌：花色分组连排且王列最右', (function () {
     var hand = mk([[5, 0], [9, 1], [3, 0], [14, 2], [16, -1], [5, 1], [4, 0]]);
     var cols = DD.arrangeHandColumns(hand, 2, 'suit', null).columns;

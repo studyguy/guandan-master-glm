@@ -25,7 +25,7 @@
   var UI = DD.UI = {
     settings: { difficulty: 'easy', coach: true, counter: true, rotateDismissed: false, sortMode: 'smart' },
     game: null,
-    selected: {}, locked: {}, advice: null, plans: [],
+    selected: {}, advice: null, plans: [],
     selectedPlanKey: null, review: '', analysisOpen: false,
     playedAcc: {},           // 对手已出计数（我/队友用当前手牌扣除）
     orderBadges: ['', '🥇', '🥈', '🥉', '4'],
@@ -195,15 +195,7 @@
   // 当前理牌模式的列结构：每列 = 同点数一叠（纵向排列）；智能理牌时按
   // 王→炸弹→同花色连张(同顺)→三张→对子→单张 分组，组间留间隔
   function handColumns(st) {
-    return DD.arrangeHandColumns(st.players[HUMAN].hand, st.tableLevel, UI.settings.sortMode, UI.locked).columns;
-  }
-  function toggleLock(c, st) {
-    if (UI.locked[c.id]) delete UI.locked[c.id];
-    else UI.locked[c.id] = c;
-    UI._lastLockAt = Date.now();
-    DD.SFX && DD.SFX.play('click');
-    renderHand(st);
-    updateComboLabel(st);
+    return DD.arrangeHandColumns(st.players[HUMAN].hand, st.tableLevel, UI.settings.sortMode).columns;
   }
 
   function renderHand(st) {
@@ -225,47 +217,35 @@
       }
     });
     flat.forEach(function (col, ci) {
-      var colDiv = el('div', 'hcol' + (col.tag === '锁' ? ' locked' : ''));
+      var colDiv = el('div', 'hcol');
       if (col.newGroup) colDiv.dataset.gap = '1';
       col.cards.forEach(function (c, k) {
         var e = cardEl(c, false);
         if (UI.selected[c.id]) e.classList.add('sel');
-        if (UI.locked[c.id]) e.classList.add('locked');
         var isGroupEnd = col.tag === '同顺' && k === col.cards.length - 1 &&
           (ci + 1 >= flat.length || flat[ci + 1].tag !== '同顺');
         if (isGroupEnd) e.classList.add('tongshun');
         e.addEventListener('click', function () {
-          if (UI._lpFired === c.id) { UI._lpFired = null; return; } // 长按锁牌后吞掉本次点击
+          if (UI._dragEnd) { UI._dragEnd = false; return; } // 拖动结束后的 click 忽略
           var now = Date.now();
-          // 双击同一列：快速出整列（如同点数列直接出 对/三/炸）
-          if (UI._lastTap && UI._lastTap.col === ci && now - UI._lastTap.t < 350) {
+          // 双击同一张：快速出该张
+          if (UI._lastTap && UI._lastTap.id === c.id && now - UI._lastTap.t < 350) {
             UI._lastTap = null;
-            quickPlay(col.cards.slice(), st);
+            quickPlay([c], st);
             return;
           }
-          UI._lastTap = { col: ci, t: now };
+          UI._lastTap = { id: c.id, t: now };
           var wasArmed = UI.selectedPlanKey != null;
           UI.selectedPlanKey = null; clearHint();
           if (wasArmed) renderPlans(UI.game.viewFor(HUMAN));
-          // 整列选中：点列内任一张 = 一次性选中该列全部；已整列选中时点单张 = 只保留该张
-          var allSel = col.cards.every(function (cc) { return UI.selected[cc.id]; });
-          if (!allSel) {
-            col.cards.forEach(function (cc) { UI.selected[cc.id] = cc; });
-            DD.SFX && DD.SFX.play('select', col.cards.length);
-          } else {
-            delete UI.selected[c.id];
-            DD.SFX && DD.SFX.play('deselect');
-          }
-          renderHand(st);
+          if (UI.selected[c.id]) { delete UI.selected[c.id]; e.classList.remove('sel'); DD.SFX && DD.SFX.play('deselect'); }
+          else { UI.selected[c.id] = c; e.classList.add('sel'); DD.SFX && DD.SFX.play('select', Object.keys(UI.selected).length); }
           updateComboLabel(st);
         });
-        // 锁牌：长按 500ms（锁定后恒定排在牌堆最左）；右键 = 一次性取消全部选牌
-        e.addEventListener('pointerdown', function () {
-          clearTimeout(e._lpTimer);
-          e._lpTimer = setTimeout(function () { UI._lpFired = c.id; toggleLock(c, st); }, 500);
-        });
-        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (evName) {
-          e.addEventListener(evName, function () { clearTimeout(e._lpTimer); });
+        // 拖动选牌：按住拖动，途经的手牌都会被选中
+        e.addEventListener('pointerdown', function (ev) {
+          if (ev.button !== 0 || !UI.game) return;
+          UI._drag = { x: ev.clientX, y: ev.clientY, moved: false };
         });
         colDiv.appendChild(e);
       });
@@ -551,7 +531,7 @@
     switch (ev) {
       case 'deal':
         DD.SFX && DD.SFX.play('deal');
-        UI.playedAcc = {}; UI.selected = {}; UI.locked = {}; UI.plans = []; UI.review = ''; UI.selectedPlanKey = null;
+        UI.playedAcc = {}; UI.selected = {}; UI.plans = []; UI.review = ''; UI.selectedPlanKey = null;
         clearPlays(); renderAll(st); break;
       case 'state': renderAll(st); break;
       case 'needPlay':
@@ -574,7 +554,6 @@
         }
         break;
       case 'play':
-        d.move.cards.forEach(function (c) { delete UI.locked[c.id]; });
         showPlay(d.idx, d.move);
         if (d.idx !== HUMAN) { // 出牌是公开信息：所有其他玩家（含队友）的出牌都计入
           d.move.cards.forEach(function (c) { UI.playedAcc[c.v] = (UI.playedAcc[c.v] || 0) + 1; });
@@ -686,6 +665,30 @@
     });
     // 手牌区右键：一次性取消全部选中的牌
     $('#hand').addEventListener('contextmenu', function (ev) { ev.preventDefault(); cancelAllSelection(); });
+    // 拖动选牌：按住左键拖动，途经的手牌都会被选中（松开结束）
+    document.addEventListener('pointermove', function (ev) {
+      var d = UI._drag;
+      if (!d) return;
+      if (!d.moved && Math.abs(ev.clientX - d.x) < 6 && Math.abs(ev.clientY - d.y) < 6) return;
+      d.moved = true;
+      var el = document.elementFromPoint(ev.clientX, ev.clientY);
+      var card = el && el.closest ? el.closest('#hand .card') : null;
+      if (card && card.dataset.id && !UI.selected[card.dataset.id]) {
+        var st = UI.game ? UI.game.state() : null;
+        if (!st) return;
+        var hand = st.players[HUMAN].hand;
+        for (var i = 0; i < hand.length; i++) {
+          if (hand[i].id === card.dataset.id) { UI.selected[hand[i].id] = hand[i]; break; }
+        }
+        card.classList.add('sel');
+        DD.SFX && DD.SFX.play('select', Object.keys(UI.selected).length);
+        updateComboLabel(UI.game.state());
+      }
+    });
+    document.addEventListener('pointerup', function () {
+      if (UI._drag && UI._drag.moved) UI._dragEnd = true; // 吞掉拖动结束后的 click
+      UI._drag = null;
+    });
     $('#btn-coach-close').addEventListener('click', function (e) { e.stopPropagation(); setCoachOpen(false); });
     $('#side-backdrop').addEventListener('click', function () { setCoachOpen(false); });
     $('#counter').addEventListener('click', function () { if (isMobileLayout() && !UI.counterOpenMobile) { UI.counterOpenMobile = true; DD.SFX && DD.SFX.play('unfold'); if (UI.game) renderCounter(UI.game.state()); } });
@@ -718,6 +721,7 @@
       return '🔀 智能理牌';
     }
     $('#btn-sort-toggle').addEventListener('click', function () {
+      cancelAllSelection(); // 切换理牌方式先取消选中
       var idx = 0;
       for (var i = 0; i < sortModes.length; i++) if (sortModes[i][0] === UI.settings.sortMode) idx = i;
       UI.settings.sortMode = sortModes[(idx + 1) % sortModes.length][0];
