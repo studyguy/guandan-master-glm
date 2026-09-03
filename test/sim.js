@@ -74,6 +74,22 @@ console.log('[1] 牌型/压制/万能配');
     var bj = A([card(16, -1, 0)], 5), sj = A([card(15, -1, 0)], 5);
     return bj.rank === 16 && sj.rank === 15 && DD.moveLabel(bj) === '单张 大王' && DD.moveLabel(sj) === '单张 小王';
   })());
+
+  // 按花色理牌：♠♥♣♦ 分组连排、组内点数升序、王排最后（供花色理牌模式使用）
+  T('按花色理牌分组/升序/王最后', (function () {
+    var hand = mk([[5, 0], [9, 1], [3, 0], [14, 2], [16, -1], [5, 1], [15, -1], [4, 0], [10, 3]]);
+    var sorted = DD.sortBySuit(hand);
+    if (sorted.length !== hand.length) return false;
+    var lastKey = -1;
+    for (var i = 0; i < sorted.length; i++) {
+      var c = sorted[i];
+      var key = (c.s >= 0 ? c.s : 4) * 1000 + c.v * 10 + c.d;
+      if (key < lastKey) return false;
+      lastKey = key;
+    }
+    return sorted[0].v === 3 && sorted[0].s === 0        // ♠3 组首
+      && sorted[sorted.length - 1].v === 16;             // 大王收尾
+  })());
 })();
 
 // ---------------- [2] 走法生成 ----------------

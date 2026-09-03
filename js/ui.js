@@ -13,7 +13,7 @@
   var ME_TEAM = 0;
 
   var UI = DD.UI = {
-    settings: { difficulty: 'easy', coach: true, counter: true, sound: true, coachOpen: true, counterFolded: false, rotateDismissed: false },
+    settings: { difficulty: 'easy', coach: true, counter: true, sound: true, coachOpen: true, counterFolded: false, rotateDismissed: false, sortMode: 'rank' },
     game: null,
     selected: {}, advice: null, plans: [],
     selectedPlanKey: null, review: '', analysisOpen: false,
@@ -172,9 +172,14 @@
   function renderHand(st) {
     var box = $('#hand');
     box.innerHTML = '';
-    DD.sortByLevel(st.players[HUMAN].hand, st.tableLevel).forEach(function (c) {
+    var suitMode = UI.settings.sortMode === 'suit';
+    var sorted = suitMode ? DD.sortBySuit(st.players[HUMAN].hand) : DD.sortByLevel(st.players[HUMAN].hand, st.tableLevel);
+    sorted.forEach(function (c, idx) {
       var e = cardEl(c, false);
       if (UI.selected[c.id]) e.classList.add('sel');
+      // 花色理牌：分组边界留出视觉间隔，一眼区分同花色连张
+      if (suitMode && idx > 0 && sorted[idx - 1].s !== c.s) e.dataset.gap = '1';
+      else if (e.dataset.gap) delete e.dataset.gap;
       e.addEventListener('click', function () {
         var now = Date.now();
         if (UI._lastTap && UI._lastTap.id === c.id && now - UI._lastTap.t < 350) { UI._lastTap = null; quickPlay(c); return; }
@@ -195,7 +200,11 @@
     var reserve = isMobileLayout() ? 140 : 320;
     var avail = Math.max(cw, window.innerWidth - reserve);
     var shift = n > 1 ? Math.min(cw * 0.55, (avail - cw) / (n - 1)) : 0;
-    for (var i = 0; i < n; i++) box.children[i].style.marginLeft = i === 0 ? '0px' : (shift - cw).toFixed(1) + 'px';
+    for (var i = 0; i < n; i++) {
+      var node = box.children[i];
+      var extra = node.dataset && node.dataset.gap ? Math.max(8, cw * 0.22) : 0;
+      node.style.marginLeft = i === 0 ? '0px' : (shift - cw + extra).toFixed(1) + 'px';
+    }
   }
 
   function getSelected() { return Object.keys(UI.selected).map(function (k) { return UI.selected[k]; }); }
@@ -584,6 +593,14 @@
       this.textContent = '🎓 教练' + (UI.settings.coach ? '' : '：关');
       renderCoachShell(); if (UI.game) renderAll(UI.game.state());
     });
+    $('#btn-sort-toggle').addEventListener('click', function () {
+      UI.settings.sortMode = UI.settings.sortMode === 'suit' ? 'rank' : 'suit';
+      saveSettings();
+      this.textContent = '🔀 理牌：' + (UI.settings.sortMode === 'suit' ? '花色' : '大小');
+      DD.SFX && DD.SFX.play('click');
+      if (UI.game) renderHand(UI.game.state());
+    });
+    $('#btn-sort-toggle').textContent = '🔀 理牌：' + (UI.settings.sortMode === 'suit' ? '花色' : '大小');
     $('#btn-sound-toggle').textContent = '🔊 音效';
     $('#btn-counter-toggle').textContent = '🔍 记牌器';
     $('#btn-coach-toggle').textContent = '🎓 教练';

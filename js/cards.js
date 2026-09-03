@@ -35,6 +35,18 @@
     });
   };
 
+  // 按花色理牌（便于识别同花色连张 → 顺子/同花顺机会）：
+  // ♠♥♣♦ 分组连排、组内按点数升序；王无花色排最右（小王在前）。
+  // 级牌保持花色内的自然位置——红桃级牌即万能配，落位后可直接看出补顺/补同花顺的机会。
+  DD.sortBySuit = function (cards) {
+    return cards.slice().sort(function (a, b) {
+      var sa = a.s >= 0 ? a.s : 4, sb = b.s >= 0 ? b.s : 4;
+      if (sa !== sb) return sa - sb;
+      if (a.v !== b.v) return a.v - b.v;
+      return a.d - b.d;
+    });
+  };
+
   DD.countMap = function (cards) {
     var m = {};
     for (var i = 0; i < cards.length; i++) {
