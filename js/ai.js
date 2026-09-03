@@ -99,6 +99,240 @@
     return { combos: comboN, hands: comboN };
   };
 
+  // ===== 高手难度：小残局精确搜索（忽略对手干扰的上限规划） =====
+  // 把手牌折算成 点数→张数（王单独计 J15/J16）
+  function countByV(cards) {
+    var cnt = {};
+    cards.forEach(function (c) {
+      var key = c.s < 0 ? 'J' + c.v : c.v;
+      cnt[key] = (cnt[key] || 0) + 1;
+    });
+    return cnt;
+  }
+  function stateKey(cnt) {
+    var ks = [];
+    for (var v = 2; v <= 14; v++) ks.push(cnt[v] || 0);
+    ks.push(cnt['J15'] || 0, cnt['J16'] || 0);
+    return ks.join(',');
+  }
+  function cntTake(cnt, v, n) {
+    if (!(cnt[v] >= n)) return false;
+    cnt[v] -= n;
+    return true;
+  }
+  function cntRestore(cnt, v, n) { cnt[v] = (cnt[v] || 0) + n; }
+
+  /** 最少几手出完（记忆化 DFS；hand ≤ 10 张时调用，节点预算防失控） */
+  DD.minHandsExact = function (cards, level) {
+    var cnt = {};
+    cards.forEach(function (c) {
+      var key = c.s < 0 ? 'J' + c.v : c.v;
+      cnt[key] = (cnt[key] || 0) + 1;
+    });
+    var memo = {};
+    var budget = { n: 60000 };
+    function dfs(st) {
+      var key = stateKey(st);
+      if (memo[key] != null) return memo[key];
+      if (budget.n-- <= 0) return 99;
+      // 剩余牌总数
+      var total = 0, v;
+      for (v = 2; v <= 14; v++) total += st[v] || 0;
+      total += (st['J15'] || 0) + (st['J16'] || 0);
+      if (total === 0) { memo[key] = 0; return 0; }
+      var best = 99;
+      function tryHand(take, undo) {
+        take();
+        var sub = dfs(st);
+        if (1 + sub < best) best = 1 + sub;
+        undo();
+      }
+      // 同点数 1/2/3 张 或 炸弹（≥4 全出）
+      for (v = 2; v <= 14; v++) {
+        var n = st[v] || 0;
+        if (n >= 1) (function (vv) { tryHand(function () { cntTake(st, vv, 1); }, function () { cntRestore(st, vv, 1); }); })(v);
+        if (n >= 2) (function (vv) { tryHand(function () { cntTake(st, vv, 2); }, function () { cntRestore(st, vv, 2); }); })(v);
+        if (n >= 3) (function (vv) { tryHand(function () { cntTake(st, vv, 3); }, function () { cntRestore(st, vv, 3); }); })(v);
+        if (n >= 4) (function (vv, all) { tryHand(function () { cntTake(st, vv, all); }, function () { cntRestore(st, vv, all); }); })(v, n);
+      }
+      // 顺子（5 连，含 A2345）
+      for (var lo = 3; lo <= 10; lo++) {
+        if (st[lo] && st[lo + 1] && st[lo + 2] && st[lo + 3] && st[lo + 4]) {
+          [lo, lo + 1, lo + 2, lo + 3, lo + 4].forEach(function (vv) { cntTake(st, vv, 1); });
+          tryHand(function () {}, function () {});
+          [lo, lo + 1, lo + 2, lo + 3, lo + 4].forEach(function (vv) { cntRestore(st, vv, 1); });
+        }
+      }
+      if (st[14] && st[2] && st[3] && st[4] && st[5]) {
+        [14, 2, 3, 4, 5].forEach(function (vv) { cntTake(st, vv, 1); });
+        tryHand(function () {}, function () {});
+        [14, 2, 3, 4, 5].forEach(function (vv) { cntRestore(st, vv, 1); });
+      }
+      // 连对（≥3 连续点数，各出 2）
+      var L;
+      for (L = 3; L <= 8; L++) {
+        for (lo = 3; lo + L - 1 <= 14; lo++) {
+          var okRun = true;
+          for (v = lo; v < lo + L; v++) if (!(st[v] >= 2)) { okRun = false; break; }
+          if (okRun) {
+            (function (lo2, L2) {
+              for (v = lo2; v < lo2 + L2; v++) cntTake(st, v, 2);
+              tryHand(function () {}, function () {});
+              for (v = lo2; v < lo2 + L2; v++) cntRestore(st, v, 2);
+            })(lo, L);
+          }
+        }
+      }
+      // 钢板（≥2 连续点数，各出 3）
+      for (L = 2; L <= 4; L++) {
+        for (lo = 3; lo + L - 1 <= 14; lo++) {
+          var ok3 = true;
+          for (v = lo; v < lo + L; v++) if (!(st[v] >= 3)) { ok3 = false; break; }
+          if (ok3) {
+            (function (lo2, L2) {
+              for (v = lo2; v < lo2 + L2; v++) cntTake(st, v, 3);
+              tryHand(function () {}, function () {});
+              for (v = lo2; v < lo2 + L2; v++) cntRestore(st, v, 3);
+            })(lo, L);
+          }
+        }
+      }
+      // 三带二
+      for (v = 2; v <= 14; v++) {
+        if (!(st[v] >= 3)) continue;
+        for (var w = 2; w <= 14; w++) {
+          if (w === v || !(st[w] >= 2)) continue;
+          cntTake(st, v, 3); cntTake(st, w, 2);
+          tryHand(function () {}, function () {});
+          cntRestore(st, v, 3); cntRestore(st, w, 2);
+        }
+      }
+      // 四王炸
+      if ((st['J15'] || 0) >= 2 && (st['J16'] || 0) >= 2) {
+        st['J15'] -= 2; st['J16'] -= 2;
+        tryHand(function () {}, function () {});
+        st['J15'] += 2; st['J16'] += 2;
+      }
+      // 王单张
+      if (st['J15'] >= 1) { st['J15'] -= 1; tryHand(function () {}, function () {}); st['J15'] += 1; }
+      if (st['J16'] >= 1) { st['J16'] -= 1; tryHand(function () {}, function () {}); st['J16'] += 1; }
+      memo[key] = best;
+      return best;
+    }
+    function dfs(st) {
+      var key = stateKey(st);
+      if (memo[key] != null) return memo[key];
+      if (budget.n-- <= 0) return 99;
+      var total = 0, v;
+      for (v = 2; v <= 14; v++) total += st[v] || 0;
+      total += (st['J15'] || 0) + (st['J16'] || 0);
+      if (total === 0) { memo[key] = 0; return 0; }
+      var best = 99;
+      // 同点数 1/2/3 张 或 炸弹（≥4 全出）
+      for (v = 2; v <= 14; v++) {
+        var n = st[v] || 0;
+        if (n >= 1 && best > 1) { st[v] = n - 1; var sub = dfs(st); st[v] = n; if (1 + sub < best) best = 1 + sub; }
+        if (n >= 2 && best > 2) { st[v] = n - 2; sub = dfs(st); st[v] = n; if (2 + sub < best) best = 2 + sub; }
+        if (n >= 3 && best > 3) { st[v] = n - 3; sub = dfs(st); st[v] = n; if (3 + sub < best) best = 3 + sub; }
+        if (n >= 4) { st[v] = 0; sub = dfs(st); st[v] = n; if (1 + sub < best) best = 1 + sub; }
+      }
+      // 顺子（5 连，含 A2345）
+      var lo, v2, i2, seg;
+      for (lo = 3; lo <= 10; lo++) {
+        var okS = true;
+        for (v2 = lo; v2 < lo + 5; v2++) if (!(st[v2] >= 1)) { okS = false; break; }
+        if (okS) {
+          seg = [lo, lo + 1, lo + 2, lo + 3, lo + 4];
+          seg.forEach(function (vv) { st[vv]--; });
+          var s1 = dfs(st);
+          seg.forEach(function (vv) { st[vv]++; });
+          if (1 + s1 < best) best = 1 + s1;
+        }
+      }
+      if (st[14] && st[2] && st[3] && st[4] && st[5]) {
+        st[14]--; st[2]--; st[3]--; st[4]--; st[5]--;
+        var s2 = dfs(st);
+        st[14]++; st[2]++; st[3]++; st[4]++; st[5]++;
+        if (1 + s2 < best) best = 1 + s2;
+      }
+      // 连对（≥3 连续点数，各出 2）
+      for (var L = 3; L <= 8; L++) {
+        for (lo = 3; lo + L - 1 <= 14; lo++) {
+          var okP = true;
+          for (v2 = lo; v2 < lo + L; v2++) if (!(st[v2] >= 2)) { okP = false; break; }
+          if (okP) {
+            for (v2 = lo; v2 < lo + L; v2++) st[v2] -= 2;
+            var s3 = dfs(st);
+            for (v2 = lo; v2 < lo + L; v2++) st[v2] += 2;
+            if (1 + s3 < best) best = 1 + s3;
+          }
+        }
+      }
+      // 钢板（≥2 连续点数，各出 3）
+      for (var M = 2; M <= 4; M++) {
+        for (lo = 3; lo + M - 1 <= 14; lo++) {
+          var okT = true;
+          for (v2 = lo; v2 < lo + M; v2++) if (!(st[v2] >= 3)) { okT = false; break; }
+          if (okT) {
+            for (v2 = lo; v2 < lo + M; v2++) st[v2] -= 3;
+            var s4 = dfs(st);
+            for (v2 = lo; v2 < lo + M; v2++) st[v2] += 3;
+            if (1 + s4 < best) best = 1 + s4;
+          }
+        }
+      }
+      // 三带二
+      for (v = 2; v <= 14; v++) {
+        if (!(st[v] >= 3)) continue;
+        for (var w = 2; w <= 14; w++) {
+          if (w === v || !(st[w] >= 2)) continue;
+          st[v] -= 3; st[w] -= 2;
+          var s5 = dfs(st);
+          st[v] += 3; st[w] += 2;
+          if (1 + s5 < best) best = 1 + s5;
+        }
+      }
+      // 四王炸
+      if ((st['J15'] || 0) >= 2 && (st['J16'] || 0) >= 2) {
+        st['J15'] -= 2; st['J16'] -= 2;
+        var s6 = dfs(st);
+        st['J15'] += 2; st['J16'] += 2;
+        if (1 + s6 < best) best = 1 + s6;
+      }
+      // 王单张
+      if (st['J15'] >= 1) { st['J15'] -= 1; var a1 = dfs(st); st['J15'] += 1; if (1 + a1 < best) best = 1 + a1; }
+      if (st['J16'] >= 1) { st['J16'] -= 1; var a2 = dfs(st); st['J16'] += 1; if (1 + a2 < best) best = 1 + a2; }
+      memo[key] = best;
+      return best;
+    }
+    return dfs(cnt);
+  };
+
+  /** 其他玩家手中还可能存在的更大压制牌（估算：总8张 - 已打出 - 我手里的） */
+  function higherLeftOf(mainV, level, played, myCnt) {
+    var eff = DD.effOf(mainV, level);
+    var left = 0;
+    for (var vv = 2; vv <= 16; vv++) {
+      var effV = DD.effOf(vv, level);
+      if (effV <= eff) continue;
+      var total = vv >= 15 ? 2 : 8;
+      left += Math.max(0, total - (played[vv] || 0) - (myCnt[vv] || 0));
+    }
+    return left;
+  }
+  /** 对手还能组成更大同型牌的估算（对/三：向下取整凑组） */
+  function higherComboLeft(mainV, level, played, myCnt, per) {
+    var eff = DD.effOf(mainV, level);
+    var left = 0;
+    for (var vv = 2; vv <= 16; vv++) {
+      var effV = DD.effOf(vv, level);
+      if (effV <= eff) continue;
+      var total = vv >= 15 ? 2 : 8;
+      left += Math.max(0, Math.floor((total - (played[vv] || 0) - (myCnt[vv] || 0)) / per));
+    }
+    return left;
+  }
+
   /**
    * 智能理牌（仅用于展示排序，不影响出牌校验）：
    * 组顺序 王 → 炸弹(同点≥4) → 同花色连张(≥3连，标"同顺"，同花顺机会) →
@@ -306,6 +540,109 @@
     return m.info.len;
   }
 
+  /**
+   * 高手专属博弈层（在 bestPlay 启发式之上叠加）：
+   * 1. 无敌领出：基于已出牌推断"该列牌对手已无更大牌可压"
+   * 2. 炸弹经济：根据未现身炸弹潜力决定忍/炸
+   * 3. 搭档协同：搭档快出完时领小单张喂牌；自己剩 2 张时大牌接管
+   * 4. 小残局精确规划：≤10 张时按最少手数精确搜索选择领出/压制
+   */
+  DD.bestPlayHard = function (view) {
+    var hand = view.me.hand, level = view.level;
+    var base = DD.bestPlay(view);
+    if (!base.move && base.reason !== 'NONE') return base;
+
+    var moves = DD.legalMoves(hand, level, view.lastPlay);
+    if (!moves.length) return base;
+    var myCnt = DD.countMap(hand);
+    var played = view.played || {};
+    var meIdx = view.me.idx;
+    var partnerIdx = (meIdx + 2) % 4;
+    var partner = null;
+    view.players.forEach(function (p) { if (p.idx === partnerIdx) partner = p; });
+    var partnerCnt = partner ? partner.count : 99;
+    var myMin = hand.length;
+    var eMin = enemyMin(view);
+    var last = view.lastPlay;
+
+    // —— 领出 ——
+    if (!last) {
+      // 喂搭档：搭档只剩 1~2 张且我不少手 → 领最小单张让搭档接走
+      if (partnerCnt >= 1 && partnerCnt <= 2 && myMin > 4) {
+        var singles = moves.filter(function (m) { return m.info.type === 'SINGLE'; })
+          .sort(function (a, b) { return a.info.main - b.info.main; });
+        if (singles.length) return { move: singles[0], reason: 'FEED' };
+      }
+      // 无敌领出：同点数列对手已无更大同型牌可压（含炸弹无法再生的近似）
+      var unbeat = null;
+      moves.forEach(function (m) {
+        var t = m.info.type;
+        if (t !== 'SINGLE' && t !== 'PAIR' && t !== 'TRIPLE' && t !== 'BOMB') return;
+        var per = t === 'SINGLE' ? 1 : t === 'PAIR' ? 2 : 3;
+        var left = higherComboLeft(m.info.main, level, played, myCnt, per);
+        if (left === 0 && (!unbeat || m.cards.length > unbeat.cards.length)) unbeat = m;
+      });
+      if (unbeat) return { move: unbeat, reason: 'UNBEATABLE' };
+      // 小残局精确规划
+      if (hand.length <= 10) {
+        var seen = {};
+        var best = null, bestSc = 99;
+        moves.forEach(function (m) {
+          var k2 = m.info.type + '|' + m.info.main;
+          if (seen[k2]) return; seen[k2] = 1;
+          var rest = without(hand, m.cards);
+          var h2 = DD.minHandsExact(rest, level);
+          if (h2 < bestSc) { bestSc = h2; best = m; }
+        });
+        if (best) return { move: best, reason: 'EXACT_LEAD' };
+      }
+      return base;
+    }
+
+    // —— 跟牌 ——
+    var enemy = !(view.players[last.playerIdx].team === view.me.team);
+    var normals = moves.filter(function (m) { return !isBombInfo(m.info); });
+
+    if (!enemy) {
+      // 队友出的牌：我快出完时大牌接管抢头游；否则不压队友
+      for (var j = 0; j < moves.length; j++) if (moves[j].cards.length === hand.length) return { move: moves[j], reason: 'WIN' };
+      if (myMin <= 2) {
+        var over = biggest(moves.filter(function (m) { return !isBombInfo(m.info); }));
+        if (over) return { move: over, reason: 'OVERTAKE' };
+      }
+      return { move: null, reason: 'PASS_PARTNER' };
+    }
+
+    // 对手出的牌
+    if (!normals.length) {
+      // 只能炸：炸弹经济——对手还有炸弹潜力且不紧迫时保留
+      var risk = 0;
+      for (var v = 2; v <= 14; v++) {
+        var unseen = Math.max(0, 8 - (played[v] || 0) - (myCnt[v] || 0));
+        if (unseen >= 4) risk++;
+      }
+      if (eMin <= 3 || myMin <= 4 || risk === 0) {
+        var bm = moves.filter(function (m) { return isBombInfo(m.info); })
+          .sort(function (a, b2) { return bombRank(a) - bombRank(b2); });
+        return { move: bm[0], reason: 'BOMB' };
+      }
+      return { move: null, reason: 'SAVE' };
+    }
+    if (eMin <= 2) return { move: biggest(normals), reason: 'SUPPRESS' };
+    // 中盘强压制：出大牌后我的剩余手数（精确）≤1 → 抢回控制权快速收尾
+    if (hand.length <= 10) {
+      var big = biggest(normals);
+      var restN = without(hand, big.cards);
+      if (DD.minHandsExact(restN, level) <= 1) return { move: big, reason: 'SUPPRESS_END' };
+    }
+    // 万能配经济：优先不消耗 ✦ 的 cheapest
+    var cheapNoWild = cheapest(normals.filter(function (m) {
+      return !m.cards.some(function (c) { return DD.isWild(c, level); });
+    }));
+    if (cheapNoWild) return { move: cheapNoWild, reason: 'BEAT' };
+    return { move: cheapest(normals), reason: 'BEAT_WILD' };
+  };
+
   /** 三档难度出牌 */
   DD.botPlay = function (view, difficulty) {
     var hand = view.me.hand, level = view.level;
@@ -330,6 +667,6 @@
       }
       return forceLead(bp);
     }
-    return forceLead(DD.bestPlay(view));
+    return forceLead(DD.bestPlayHard(view));
   };
 })(typeof self !== 'undefined' ? self : globalThis);

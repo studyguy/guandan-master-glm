@@ -37,6 +37,7 @@
       lastPlay: null,
       order: [],                     // 本手出完名次 idx 列表
       rank: [-1, -1, -1, -1],
+      played: {},                    // 本手已打出的牌（点数→张数，公开信息）
       winnerTeam: -1,
       passAfterLast: 0,
       nextLeader: -1
@@ -76,6 +77,7 @@
       M.hand++;
       M.order = [];
       M.rank = [-1, -1, -1, -1];
+      M.played = {};
       M.winnerTeam = -1;
       M.lastPlay = null;
       M.passAfterLast = 0;
@@ -134,6 +136,7 @@
       if (move) {
         var ids = {}; move.cards.forEach(function (c) { ids[c.id] = 1; });
         p.hand = p.hand.filter(function (c) { return !ids[c.id]; });
+        move.cards.forEach(function (c) { M.played[c.v] = (M.played[c.v] || 0) + 1; });
         M.lastPlay = { playerIdx: idx, info: move.info, cards: move.cards };
         M.passAfterLast = 0;
         emit('play', { idx: idx, move: move, left: p.hand.length });
@@ -253,6 +256,7 @@
           return { idx: p.idx, count: p.hand.length, finished: p.finished, order: p.order, team: teamOf(p.idx) };
         }),
         lastPlay: M.lastPlay,
+        played: (function () { var pc = {}; for (var k in M.played) pc[k] = M.played[k]; return pc; })(),
         level: M.tableLevel,
         turn: M.turn
       };

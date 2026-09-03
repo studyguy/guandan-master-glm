@@ -94,6 +94,53 @@ console.log('[1] 牌型/压制/万能配');
     return vs.join(',') === '3,5,9,16' && cols[2].cards.length === 2;
   })());
 
+  // ===== 高手博弈层 =====
+  T('精确搜索：各类牌型最少手数', (function () {
+    function h(spec) { return mk(spec.map(function (x) { return [x[0], x[1], 0]; })); }
+    if (DD.minHandsExact(h([[3, 0], [3, 1], [3, 2], [3, 3]]), 2) !== 1) return false;   // 炸弹
+    if (DD.minHandsExact(h([[3, 0], [4, 1], [5, 2], [6, 3], [7, 0]]), 2) !== 1) return false; // 顺子
+    if (DD.minHandsExact(h([[3, 0], [3, 1], [4, 0], [4, 1], [5, 0], [5, 1]]), 2) !== 1) return false; // 连对
+    if (DD.minHandsExact(h([[3, 0], [3, 1], [3, 2], [4, 0], [4, 1], [4, 2]]), 2) !== 1) return false; // 钢板
+    var mixed = h([[3, 0], [3, 1], [3, 2], [4, 0], [4, 1], [4, 2], [5, 0], [5, 1]]);
+    if (DD.minHandsExact(mixed, 2) !== 2) return false; // 钢板 + 对 5
+    return DD.minHandsExact(h([[15, -1], [16, -1], [15, -1], [16, -1]]), 2) === 1; // 四王炸
+  })());
+  T('高手：基于已出牌的无敌领出', (function () {
+    var hand = mk([[13, 0], [13, 1], [3, 2]]); // ♠K ♥K ♣3
+    var view = {
+      me: { idx: 0, hand: hand, team: 0 },
+      players: [{ idx: 0, count: 3, team: 0, finished: false }, { idx: 1, count: 3, team: 1, finished: false },
+                { idx: 2, count: 3, team: 0, finished: false }, { idx: 3, count: 3, team: 1, finished: false }],
+      lastPlay: null, played: { '2': 4, '14': 4, '15': 2, '16': 2 }, // 更大的牌（级牌2/A/双王）全部现身
+      level: 2, turn: 0
+    };
+    var r = DD.bestPlayHard(view);
+    return r.reason === 'UNBEATABLE' && r.move.cards.length === 2 && r.move.cards[0].v === 13;
+  })());
+  T('高手：搭档快出完时喂最小单张', (function () {
+    var hand = mk([[3, 0], [4, 0], [5, 0], [6, 3], [7, 1], [8, 1], [13, 3]]);
+    var view = {
+      me: { idx: 0, hand: hand, team: 0 },
+      players: [{ idx: 0, count: 7, team: 0, finished: false }, { idx: 1, count: 5, team: 1, finished: false },
+                { idx: 2, count: 1, team: 0, finished: false }, { idx: 3, count: 4, team: 1, finished: false }],
+      lastPlay: null, played: {}, level: 2, turn: 0
+    };
+    var r = DD.bestPlayHard(view);
+    return r.reason === 'FEED' && r.move.cards.length === 1 && r.move.cards[0].v === 3;
+  })());
+  T('高手：对手剩 2 张时强压制出最大牌', (function () {
+    var hand = mk([[10, 0], [10, 1], [3, 2], [13, 3]]);
+    var view = {
+      me: { idx: 0, hand: hand, team: 0 },
+      players: [{ idx: 0, count: 4, team: 0, finished: false }, { idx: 1, count: 2, team: 1, finished: false },
+                { idx: 2, count: 5, team: 0, finished: false }, { idx: 3, count: 6, team: 1, finished: false }],
+      lastPlay: { playerIdx: 1, info: { type: 'PAIR', main: 9, len: 2 }, cards: mk([[9, 0], [9, 1]]) },
+      played: { '9': 2 }, level: 2, turn: 0
+    };
+    var r = DD.bestPlayHard(view);
+    return r.reason === 'SUPPRESS' && r.move.info.main > 9;
+  })());
+
   // 智能理牌：王→炸弹→同花色连张(同顺)→三张→对子→单张；不丢牌、组内升序
   T('智能理牌分组完整且不丢牌', (function () {
     var hand = mk([[3, 0], [3, 1], [3, 2], [3, 3], [5, 0], [5, 1], [5, 2],
