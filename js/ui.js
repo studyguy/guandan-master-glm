@@ -87,17 +87,16 @@
     box.classList.remove('folded');
     var acc = function (v) { return UI.playedAcc[v] || 0; };
     var mine = DD.countMap(st.players[HUMAN].hand);
-    var part = DD.countMap(st.players[2].hand);
     var html = '<div class="counter-row">';
     var order = [16, 15]; // 王先显示：大王小王合并为“王”
     html += '<div class="counter-item hot"><b>王</b><span>' + Math.max(0, 4 - acc(16) - acc(15)) + '</span></div>';
     // 级牌高亮行
     var lv = st.tableLevel;
-    html += '<div class="counter-item hot"><b>级' + levelT(lv) + '</b><span>' + Math.max(0, 8 - (mine[lv] || 0) - (part[lv] || 0) - acc(lv)) + '</span></div>';
+    html += '<div class="counter-item hot"><b>级' + levelT(lv) + '</b><span>' + Math.max(0, 8 - (mine[lv] || 0) - acc(lv)) + '</span></div>';
     html += '</div><div class="counter-row">';
     for (var v = 14; v >= 2; v--) {
       if (v === lv) continue;
-      var n = Math.max(0, 8 - (mine[v] || 0) - (part[v] || 0) - acc(v));
+      var n = Math.max(0, 8 - (mine[v] || 0) - acc(v));
       html += '<div class="counter-item"><b>' + (v === 14 ? 'A' : v) + '</b><span>' + n + '</span></div>';
     }
     html += '</div>';
@@ -123,25 +122,24 @@
     // 报牌提示：≤报牌张数时常驻红点
     seat.classList.toggle('reporting', !si.p.finished && si.p.count > 0 && si.p.count <= DD.RULES.reportAt);
   }
-  // 对家亮牌小扇形（宽度自适应：不超过牌桌宽的 45%，避免压到右上角记牌器）
+  // 对家牌背扇形（真实规则：不能看到队友的手牌；宽度自适应不超牌桌宽 42%）
   function renderFanPartner(st) {
     var box = $('#fan-2');
     box.innerHTML = '';
-    var cards = DD.sortByLevel(st.players[2].hand, st.tableLevel);
-    var n = cards.length;
+    var n = st.players[2].hand.length;
     if (!n) return;
-    var probe = cardEl(cards[0], true);
+    var probe = cardEl(st.players[2].hand[0], true, true);
     box.appendChild(probe);
     var cw = probe.offsetWidth || 30;
     var table = $('#table');
     var maxW = Math.max(cw * 2, (table ? table.clientWidth : window.innerWidth) * 0.42);
     var step = n > 1 ? Math.min(cw * 0.55, (maxW - cw) / (n - 1)) : 0;
     box.removeChild(probe);
-    cards.forEach(function (c, k) {
-      var e = cardEl(c, true);
+    for (var k = 0; k < n; k++) {
+      var e = cardEl(st.players[2].hand[0], true, true);
       if (k > 0) e.style.marginLeft = (step - cw).toFixed(1) + 'px';
       box.appendChild(e);
-    });
+    }
   }
   function renderFansOpponents(st) {
     [1, 3].forEach(function (i) {
@@ -532,7 +530,7 @@
       case 'play':
         d.move.cards.forEach(function (c) { delete UI.locked[c.id]; });
         showPlay(d.idx, d.move);
-        if (d.idx === 1 || d.idx === 3) { // 对手
+        if (d.idx !== HUMAN) { // 出牌是公开信息：所有其他玩家（含队友）的出牌都计入
           d.move.cards.forEach(function (c) { UI.playedAcc[c.v] = (UI.playedAcc[c.v] || 0) + 1; });
           renderCounter(st);
         }
