@@ -3,11 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0d3b28">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="掼蛋训练营">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>掼蛋 AI 训练营 · 从零学会掼蛋</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
-<link rel="stylesheet" href="css/style.css?v=20260904g">
+<link rel="stylesheet" href="css/style.css?v=20260904h">
 </head>
 <body>
+
+<!-- 启动全屏引导（点击后进入全屏+横屏；浏览器策略要求至少一次用户点击） -->
+<div id="fs-gate" class="fs-gate">
+  <div class="fs-card">
+    <div class="fs-logo">🃏</div>
+    <div class="fs-title">掼蛋 AI 训练营</div>
+    <div class="fs-sub">建议全屏 + 横屏获得最佳体验</div>
+    <button id="btn-fs-enter" class="big-btn">⛶ 进入全屏开始</button>
+    <button id="btn-fs-skip" class="ghost-btn">跳过全屏，直接开始</button>
+    <div class="fs-hint">iOS 设备可用 Safari「添加到主屏幕」获得原生全屏体验</div>
+  </div>
+</div>
 
 <!-- 竖屏提示 -->
 <div id="rotate-hint" class="hidden">
@@ -76,6 +95,7 @@
       <span class="flex-sp"></span>
       <button id="btn-game-tutorial" class="chip-btn">📖 教程</button>
       <button id="btn-counter-toggle" class="chip-btn">🔍 记牌器</button>
+      <button id="btn-fs" class="chip-btn" title="全屏切换">⛶ 全屏</button>
       <button id="btn-sort-toggle" class="chip-btn">🔀 智能理牌</button>
       <button id="btn-coach-toggle" class="chip-btn">🎓 教练</button>
     </div>
@@ -273,15 +293,20 @@
 
 <div id="toast"></div>
 
-<script src="js/rules.js?v=20260904g"></script>
-<script src="js/cards.js?v=20260904g"></script>
-<script src="js/combos.js?v=20260904g"></script>
-<script src="js/movegen.js?v=20260904g"></script>
-<script src="js/ai.js?v=20260904g"></script>
-<script src="js/advisor.js?v=20260904g"></script>
-<script src="js/sfx.js?v=20260904g"></script>
-<script src="js/game.js?v=20260904g"></script>
-<script src="js/ui.js?v=20260904g"></script>
-<script src="js/app.js?v=20260904g"></script>
+<script src="js/rules.js?v=20260904h"></script>
+<script src="js/cards.js?v=20260904h"></script>
+<script src="js/combos.js?v=20260904h"></script>
+<script src="js/movegen.js?v=20260904h"></script>
+<script src="js/ai.js?v=20260904h"></script>
+<script src="js/advisor.js?v=20260904h"></script>
+<script src="js/sfx.js?v=20260904h"></script>
+<script src="js/game.js?v=20260904h"></script>
+<script src="js/ui.js?v=20260904h"></script>
+<script src="js/app.js?v=20260904h"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+</script>
 </body>
 </html>

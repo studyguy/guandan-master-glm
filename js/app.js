@@ -92,7 +92,49 @@
     setTimeout(function () { DD.startGame(); }, 350);
   }
 
+  // ===== 全屏 + 横屏（发布用）=====
+  function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function reqFs() {
+    var el = document.documentElement;
+    try {
+      var p = el.requestFullscreen
+        ? el.requestFullscreen({ navigationUI: 'hide' })
+        : (el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : Promise.reject(new Error('unsupported')));
+      Promise.resolve(p).then(function () {
+        if (screen.orientation && screen.orientation.lock) {
+          try { screen.orientation.lock('landscape').catch(function () {}); } catch (e2) { /* 忽略 */ }
+        }
+      }).catch(function () {});
+    } catch (e) { /* 忽略 */ }
+  }
+  function exitFs() {
+    try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* 忽略 */ }
+  }
+  function initFsGate() {
+    // 自动化钩子不显示全屏门
+    if (location.search.indexOf('autotest') >= 0 || location.search.indexOf('debug') >= 0) {
+      var g0 = document.getElementById('fs-gate');
+      if (g0) g0.classList.add('hidden');
+      return;
+    }
+    var enter = document.getElementById('btn-fs-enter');
+    var skip = document.getElementById('btn-fs-skip');
+    var fsBtn = document.getElementById('btn-fs');
+    var gate = document.getElementById('fs-gate');
+    if (!enter || !gate) return;
+    function dismiss() { gate.classList.add('hidden'); }
+    enter.addEventListener('click', function () { reqFs(); dismiss(); });
+    skip.addEventListener('click', dismiss);
+    if (fsBtn) {
+      fsBtn.addEventListener('click', function () { if (isFs()) exitFs(); else reqFs(); });
+      var syncBtn = function () { if (fsBtn) fsBtn.textContent = isFs() ? '⛶ 退出全屏' : '⛶ 全屏'; };
+      document.addEventListener('fullscreenchange', syncBtn);
+      document.addEventListener('webkitfullscreenchange', syncBtn);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    initFsGate();
     bindHome();      // 主页交互（难度/开始/教程/开关）——曾遗漏调用导致主页按钮全部失效
     DD.boot();
     initAutotest();

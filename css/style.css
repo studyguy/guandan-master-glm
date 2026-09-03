@@ -35,6 +35,19 @@ body { font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif; co
 .flex-sp { flex: 1; }
 button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 
+/* ================= 启动全屏门 ================= */
+.fs-gate { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(1200px 700px at 50% 20%, #145c3c 0%, #0d3b28 55%, #0a2b1d 100%); }
+.fs-gate.hidden { display: none; }
+.fs-card { text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 20px;
+  max-width: 92vw; }
+.fs-logo { font-size: 52px; line-height: 1; }
+.fs-title { font-size: clamp(22px, 3.2vmin + 6px, 34px); letter-spacing: 6px; color: var(--c-accent); }
+.fs-sub { font-size: 13px; color: #b9d4c6; }
+.fs-card .big-btn { width: auto; padding: 12px 40px; }
+.fs-card .ghost-btn { margin-top: -4px; }
+.fs-hint { font-size: 11px; color: #7f9c8f; margin-top: 8px; }
+
 /* ================= 主页 ================= */
 #screen-home { align-items: center; justify-content: center; overflow-y: auto; padding: var(--sp-4);
   background: radial-gradient(1200px 700px at 50% 20%, #145c3c 0%, #0d3b28 55%, #0a2b1d 100%); }

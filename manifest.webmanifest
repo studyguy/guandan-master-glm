@@ -1,0 +1,15 @@
+{
+  "name": "掼蛋 AI 训练营",
+  "short_name": "掼蛋训练营",
+  "description": "网页版掼蛋教学/对战游戏：两副牌、对家组队、从 2 打到 A，AI 教练手把手教",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0d3b28",
+  "theme_color": "#0d3b28",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
