@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>掼蛋 AI 训练营 · 从零学会掼蛋</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- 竖屏提示 -->
+<div id="rotate-hint" class="hidden">
+  <div class="rh-icon">📱↻</div>
+  <div class="rh-text">横屏体验更佳</div>
+  <div class="rh-sub">转动手机，4 人牌桌更完整</div>
+  <button id="btn-rotate-ok" class="ghost-btn">仍要竖屏游玩</button>
+</div>
+
+<!-- ================= 主页 ================= -->
+<div id="screen-home" class="screen">
+  <div class="float-card f1"></div>
+  <div class="float-card f2"></div>
+  <div class="float-card f3"></div>
+  <div class="float-card f4"></div>
+
+  <div class="home-wrap">
+    <header class="home-head">
+      <div class="home-logo">🃏</div>
+      <div class="home-head-txt">
+        <h1>掼蛋 AI 训练营</h1>
+        <p class="home-sub">两副牌 · 对家组队 · 从 2 打到 A —— AI 教练手把手教你</p>
+      </div>
+    </header>
+
+    <div class="home-main">
+      <section class="home-block">
+        <div class="home-label">对手难度（你的对家始终是可靠队友）</div>
+        <div id="diff-group">
+          <div class="diff-option on" data-diff="easy">
+            <b>🐣 入门</b><span>对手常犯错，适合新手</span>
+          </div>
+          <div class="diff-option" data-diff="medium">
+            <b>⚔️ 进阶</b><span>对手会拆牌、留炸弹</span>
+          </div>
+          <div class="diff-option" data-diff="hard">
+            <b>🔥 高手</b><span>对手会配合压制，挑战性强</span>
+          </div>
+        </div>
+      </section>
+
+      <button id="btn-start" class="big-btn">开 始 新 一 场</button>
+
+      <div id="home-stats" class="home-stats"></div>
+    </div>
+
+    <aside class="home-side">
+      <div class="home-toggles">
+        <button id="btn-home-coach" class="ghost-btn">🎓 AI 教练：开</button>
+        <button id="btn-home-counter" class="ghost-btn">🔍 记牌器：开</button>
+        <button id="btn-home-sound" class="ghost-btn">🔊 音效：开</button>
+        <button id="btn-tutorial" class="ghost-btn">📖 新手教程</button>
+      </div>
+      <p class="home-tip">一场比赛从 2 打到 A，先过 A 的一方获胜。不知道怎么玩？先看教程。</p>
+    </aside>
+  </div>
+</div>
+
+<!-- ================= 对局 ================= -->
+<div id="screen-game" class="screen hidden">
+  <div id="game-main">
+    <div id="top-bar">
+      <button id="btn-exit" class="chip-btn">← 退出</button>
+      <span id="chip-hand" class="chip">第 1 手</span>
+      <span id="chip-level" class="chip">打 2</span>
+      <span id="chip-score" class="chip">我方 2 : 2</span>
+      <span class="flex-sp"></span>
+      <button id="btn-game-tutorial" class="chip-btn">📖 教程</button>
+      <button id="btn-counter-toggle" class="chip-btn">🔍 记牌器</button>
+      <button id="btn-coach-toggle" class="chip-btn">🎓 教练</button>
+      <button id="btn-sound-toggle" class="chip-btn">🔊 音效</button>
+    </div>
+
+    <div id="table">
+      <!-- 中央区 -->
+      <div id="center-msg"></div>
+      <div id="table-last" class="muted"></div>
+
+      <!-- 对家（正上方，亮牌队友） -->
+      <div class="pseat top" id="seat-2">
+        <div class="seat-info">
+          <span class="p-name" id="name-2"></span>
+          <span class="p-role" id="role-2"></span>
+          <span class="p-count" id="count-2"></span>
+        </div>
+        <div class="p-fan" id="fan-2"></div>
+        <div class="bubble" id="bubble-2"></div>
+        <div class="played-area" id="play-2"></div>
+      </div>
+
+      <!-- 下家（右侧） -->
+      <div class="pseat right" id="seat-1">
+        <div class="seat-info"><span class="p-name" id="name-1"></span><span class="p-role" id="role-1"></span><span class="p-count" id="count-1"></span></div>
+        <div class="p-fan v" id="fan-1"></div>
+        <div class="bubble" id="bubble-1"></div>
+        <div class="played-area" id="play-1"></div>
+      </div>
+
+      <!-- 上家（左侧） -->
+      <div class="pseat left" id="seat-3">
+        <div class="seat-info"><span class="p-name" id="name-3"></span><span class="p-role" id="role-3"></span><span class="p-count" id="count-3"></span></div>
+        <div class="p-fan v" id="fan-3"></div>
+        <div class="bubble" id="bubble-3"></div>
+        <div class="played-area" id="play-3"></div>
+      </div>
+
+      <!-- 记牌器（可折叠，右上角） -->
+      <div id="counter" class="hidden">
+        <button id="btn-counter-fold" class="fold-btn" title="收起">—</button>
+        <div class="counter-title">记牌器 <span class="muted">含队友手牌 · 每点 8 张</span></div>
+        <div id="counter-body"></div>
+      </div>
+
+      <!-- 我自己 -->
+      <div class="played-area" id="play-0"></div>
+      <div id="me-bar">
+        <div class="avatar me">😀</div>
+        <span id="seat-me-name">你</span>
+        <span id="me-rank" class="me-rank"></span>
+        <div class="bubble" id="bubble-0"></div>
+      </div>
+
+      <!-- AI 教练悬浮球（侧栏收起时） -->
+      <button id="coach-fab" class="hidden">🤖<i id="coach-fab-badge" class="fab-badge">建议</i></button>
+
+      <!-- 手牌与选牌提示 -->
+      <div id="combo-label"><span class="muted">点击手牌选牌（双击单张直接出）</span></div>
+      <div id="hand"></div>
+
+      <!-- 操作按钮 -->
+      <div id="actions" class="hidden">
+        <button id="btn-pass" class="act-btn">不 出</button>
+        <button id="btn-play" class="act-btn primary">出 牌</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI 教练侧边栏 -->
+  <aside id="coach-side" class="hidden">
+    <div class="cs-head">
+      <span class="cs-title">🤖 AI 教练</span>
+      <button id="btn-coach-close" class="fold-btn" title="收起">—</button>
+    </div>
+    <div class="cs-scroll">
+      <div id="cs-situation" class="cs-situation"></div>
+      <div class="cs-analysis-wrap">
+        <div id="coach-title" class="coach-title"></div>
+        <div id="coach-lines" class="coach-lines"></div>
+        <button id="btn-analysis-toggle" class="cs-more">展开分析 ▾</button>
+      </div>
+      <div class="cs-plans-title">出牌方案 <span class="cs-plans-tip">点一次选中，再点打出</span></div>
+      <div id="coach-plans" class="cs-plans"></div>
+    </div>
+  </aside>
+  <div id="side-backdrop" class="hidden"></div>
+</div>
+
+<!-- ================= 本手结算弹窗 ================= -->
+<div id="modal-over" class="modal hidden">
+  <div class="modal-card">
+    <div id="confetti" class="hidden"></div>
+    <h2 id="over-title">本手结束</h2>
+    <div id="over-sub" class="over-sub"></div>
+    <div id="over-detail" class="over-detail"></div>
+    <table id="over-table"></table>
+    <div id="over-extra" class="over-extra"></div>
+    <div class="modal-btns">
+      <button id="btn-over-home" class="ghost-btn">返回主页</button>
+      <button id="btn-next" class="big-btn small">下一手 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 整场（过A）结算弹窗 ================= -->
+<div id="modal-session" class="modal hidden">
+  <div class="modal-card">
+    <div id="confetti-s" class="hidden"></div>
+    <h2 id="sess-title">🎉 我方过 A，赢下整场！</h2>
+    <div id="sess-sub" class="over-sub"></div>
+    <div class="modal-btns">
+      <button id="btn-sess-home" class="ghost-btn">返回主页</button>
+      <button id="btn-sess-again" class="big-btn small">再来一场</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 教程弹窗 ================= -->
+<div id="modal-tutorial" class="modal hidden">
+  <div class="modal-card tutorial">
+    <h2>📖 掼蛋新手教程</h2>
+    <div id="tutorial-tabs">
+      <div class="tab on" data-tab="basics">快速入门</div>
+      <div class="tab" data-tab="types">牌型图鉴</div>
+      <div class="tab" data-tab="rules">规则与升级</div>
+      <div class="tab" data-tab="tips">新手技巧</div>
+      <div class="tab" data-tab="coach">AI 教练</div>
+    </div>
+    <div id="tutorial-panels">
+      <div class="panel" id="panel-basics">
+        <h3>掼蛋是什么？</h3>
+        <p>4 人游戏，<b>对家是队友</b>（你和正上方的队友一队，对抗左右两侧）。用<b>两副牌共 108 张</b>，每人 27 张，无底牌。谁先出完按顺序定 头游/二游/三游/末游，头游方按名次升级。</p>
+        <h3>一场比赛的玩法</h3>
+        <ol>
+          <li>从<b>打 2</b> 开始，每手牌有一个"级牌"（当前打的点数）；双方记录各自等级。</li>
+          <li>每手牌打完，头游方升 1~3 级（队友二游=升 3 级、三游=升 2 级、末游=升 1 级）。</li>
+          <li>下一手<b>打胜方的新级牌</b>（谁赢打谁的级牌）。</li>
+          <li>打到 A：需<b>本方头游且队友不是末游</b>才算过 A，先过 A 的一方赢下整场。</li>
+        </ol>
+        <h3>单张大小</h3>
+        <p>大王 &gt; 小王 &gt; <b>级牌</b> &gt; A &gt; K &gt; … &gt; 3 &gt; 2（2 最小，级牌最大普通牌）。</p>
+      </div>
+      <div class="panel hidden" id="panel-types">
+        <h3>牌型一览</h3>
+        <table class="type-table">
+          <tr><th>牌型</th><th>说明</th></tr>
+          <tr><td>单张 / 对子</td><td>1 张 / 2 张同点（王对可出为可选规则）</td></tr>
+          <tr><td>三同张</td><td>3 张同点</td></tr>
+          <tr><td>三带二</td><td>三同张 + 一个对子（不能带单）</td></tr>
+          <tr><td>顺子</td><td>恰好 5 张连续单牌；最小 A2345，最大 10JQKA</td></tr>
+          <tr><td>连对</td><td>≥3 对连续对子（如 334455）</td></tr>
+          <tr><td>钢板</td><td>≥2 组连续三同张（如 333444）</td></tr>
+          <tr><td>炸弹</td><td>4~8 张同点（两副牌同点最多 8 张）</td></tr>
+          <tr><td>同花顺</td><td>同花色 5 连（比 5 炸大、比 6 炸小）</td></tr>
+          <tr><td>四王炸</td><td>2 大王 + 2 小王，全场最大</td></tr>
+          <tr><td>逢人配</td><td>两张红桃级牌是万能牌，可替除王以外任意牌补成牌型</td></tr>
+        </table>
+        <p class="muted">压制：同型同长比大小；炸弹/同花顺/四王炸可压普通牌；张数多的大。</p>
+      </div>
+      <div class="panel hidden" id="panel-rules">
+        <h3>出牌流程</h3>
+        <ul>
+          <li>一轮中要么出更大的同型，要么出炸弹，要么<b>不出</b>；三家都不出后，最后出牌者再领出。</li>
+          <li>有人出完即定名次（头游→二游→三游→末游），其余人继续打完。</li>
+          <li><b>接风</b>：头游最后一手无人压，由<b>对家队友</b>接着出。</li>
+          <li>剩 ≤10 张须报牌。</li>
+        </ul>
+        <h3>升级规则</h3>
+        <ul>
+          <li>头游 + 队友二游（双上）：升 3 级</li>
+          <li>头游 + 队友三游：升 2 级</li>
+          <li>头游 + 队友末游：升 1 级</li>
+          <li>打 A 时若队友末游则"过 A"失败（连续三次未过退回 2，可配置）</li>
+        </ul>
+      </div>
+      <div class="panel hidden" id="panel-tips">
+        <h3>新手四招</h3>
+        <ol>
+          <li><b>先出小牌</b>：把 2、级牌、王留在控制上；有顺子长牌早出。</li>
+          <li><b>别压队友</b>：对家出的牌别抢压，让他保持出牌权快跑。</li>
+          <li><b>炸弹省着用</b>：对手快跑完或要控场再炸；同花顺/大炸别浪费。</li>
+          <li><b>记大牌</b>：用右上角记牌器盯住 王、级牌、A 还剩几张。</li>
+        </ol>
+      </div>
+      <div class="panel hidden" id="panel-coach">
+        <h3>AI 教练怎么用？</h3>
+        <ul>
+          <li>轮到你时，侧栏给出分析 + 方案；点方案第一次选中、第二次才打出。</li>
+          <li>「展开分析」才金框提示推荐牌，平时留给你自己思考。</li>
+          <li>每手出牌后教练点评你的选择。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button id="btn-tutorial-close" class="big-btn small">开打！</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/rules.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/combos.js"></script>
+<script src="js/movegen.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/advisor.js"></script>
+<script src="js/sfx.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
