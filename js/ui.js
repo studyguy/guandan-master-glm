@@ -12,6 +12,16 @@
   var HUMAN = 0;             // 座位 0 我；2=对家队友；1=下家；3=上家
   var ME_TEAM = 0;
 
+  // BOT 真实感人名池：每局随机抽取、不重复（对家 1 人 + 对手 2 人）
+  var BOT_NAME_POOL = [
+    '王磊', '李娜', '张伟', '刘洋', '陈静', '杨帆', '赵敏', '孙鹏', '周婷', '吴凯',
+    '徐强', '朱琳', '马超', '胡雪', '郭涛', '林芳', '何平', '高翔', '罗兰', '郑毅',
+    '梁爽', '宋佳', '唐磊', '韩雪', '冯军', '曹颖', '许诺', '邓超', '彭飞', '董洁',
+    '袁弘', '蔡婷', '潘阳', '杜鹏', '范文', '程林', '苏芮', '魏东', '吕倩', '丁武'
+  ];
+  var BOT_AVATAR_POOL = ['🐵', '🐸', '🦊', '🐰', '🐼', '🐯', '🐨', '🐷', '🐔', '🦉',
+    '🐻', '🐮', '🐴', '🐧', '🐣', '🦜'];
+
   var UI = DD.UI = {
     settings: { difficulty: 'easy', coach: true, counter: true, counterFolded: false, rotateDismissed: false, sortMode: 'smart' },
     game: null,
@@ -105,6 +115,8 @@
   }
   function renderSeat(idx, st) {
     var seat = $('#seat-' + idx);
+    var av = $('#av-' + idx);
+    if (av && UI.botAvatars) av.textContent = idx === 2 ? UI.botAvatars.partner : UI.botAvatars.opps[idx === 1 ? 0 : 1];
     var si = seatInfo(idx, st);
     $('#name-' + idx).textContent = si.p.name + (si.p.finished ? ' ' + UI.orderBadges[si.p.order] : '');
     $('#role-' + idx).textContent = si.role;
@@ -553,12 +565,13 @@
   // ---------- 开局 ----------
   function startGame() {
     var diff = UI.settings.difficulty;
-    var names = {
-      easy: { partner: '小萌', opps: ['阿豆', '阿皮'] },
-      medium: { partner: '慧姐', opps: ['阿强', '阿伟'] },
-      hard: { partner: '牌圣', opps: ['神·北', '神·南'] }
-    };
-    var nm = names[diff];
+    // 每局随机人名与头像（对家 1 + 对手 2，互不重复）
+    var namePool = BOT_NAME_POOL.slice();
+    var avatarPool = BOT_AVATAR_POOL.slice();
+    function pick(pool) { return pool.splice(Math.floor(Math.random() * pool.length), 1)[0]; }
+    UI.botNames = { partner: pick(namePool), opps: [pick(namePool), pick(namePool)] };
+    UI.botAvatars = { partner: pick(avatarPool), opps: [pick(avatarPool), pick(avatarPool)] };
+    var nm = UI.botNames;
     UI.selected = {}; UI.advice = null; UI.plans = []; UI.review = ''; UI.selectedPlanKey = null; UI.playedAcc = {};
     UI.counterOpenMobile = false;
     UI.game = new DD.Game({
