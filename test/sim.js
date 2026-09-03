@@ -225,6 +225,42 @@ function runSession() {
   T('完整一场直到过A ' + JSON.stringify(res.ok ? { hands: res.hands, winner: res.winner, levels: res.levels } : res),
     res.ok && res.winner >= 0 && res.hands >= 3);
 
+  // 回归：三家全过 → 领出者直接再领出（不再要求领出者自过；旧阈值多算曾致人类玩家死局）
+  var trickClose = await (function () {
+    return new Promise(function (resolve) {
+      var plays = 0, passes = 0, done = false;
+      var g = new DD.Game({
+        players: [
+          { name: 'A', type: 'human' }, { name: 'B', type: 'human' },
+          { name: 'C', type: 'human' }, { name: 'D', type: 'human' }
+        ],
+        botDelay: 0, autoNext: false,
+        onEvent: function (ev, d) {
+          if (done) return;
+          if (ev === 'needPlay') {
+            plays++;
+            var st = g.state();
+            var hand = st.players[st.turn].hand;
+            if (plays === 1) {
+              var leads = DD.leadingMoves(hand, st.tableLevel);
+              var singles = leads.filter(function (m) { return m.info.type === 'SINGLE'; });
+              var mv = singles.length ? singles[0] : leads[0];
+              g.humanMove({ cards: mv.cards, info: mv.info });
+            } else {
+              passes++;
+              g.humanMove(null);
+            }
+          }
+          if (ev === 'trickLead') { done = true; g.destroy(); resolve({ leader: d.leader, plays: plays, passes: passes }); }
+          if (ev === 'handOver') { done = true; g.destroy(); resolve({ leader: -9, plays: plays, passes: passes }); }
+        }
+      });
+      g.start();
+    });
+  })();
+  T('三家全过后领出者直接再领出 ' + JSON.stringify(trickClose),
+    trickClose.leader === 0 && trickClose.plays === 4 && trickClose.passes === 3);
+
   console.log('\n========== 测试结果 ==========');
   console.log('通过 ' + pass + '，失败 ' + fail);
   if (fail > 0) { console.log('失败项：' + failNames.join(' | ')); process.exit(1); }

@@ -146,10 +146,20 @@
       } else {
         M.passAfterLast++;
         emit('pass', { idx: idx });
-        if (M.passAfterLast >= alive().length) {
-          // 一圈无人压 → 本轮胜者领出；若胜者已走完则接风给对家
+        // 领出位不会收到"过"（canPass 拦截人类；botPlay 兜底强制领出），此处防御异常输入
+        if (!M.lastPlay) {
+          M.turn = idxAfterSkip(idx);
+          emit('state', snap());
+          schedule();
+          return;
+        }
+        // 一圈无人压（其余未出完者全部过）→ 本轮胜者领出；若胜者已走完则接风给对家。
+        // 注意：领出者本人不能再"过"，故阈值是 alive 数减去领出者是否仍在场。
+        var others = alive().length - (players[M.lastPlay.playerIdx].finished ? 0 : 1);
+        if (M.passAfterLast >= others) {
           var winner = M.lastPlay.playerIdx;
           var lead = players[winner].finished ? partnerOf(winner) : winner;
+          if (players[lead].finished) lead = idxAfterSkip(winner); // 接风对象也已出完（双上局面）→ 顺延
           M.lastPlay = null; M.passAfterLast = 0;
           emit('trickLead', { leader: lead });
           M.leader = lead; M.turn = lead;

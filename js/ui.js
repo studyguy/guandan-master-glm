@@ -421,7 +421,13 @@
           setTimeout(function () {
             var v = UI.game.viewFor(HUMAN);
             var bp = DD.bestPlay(v);
-            if (bp.move) UI.game.humanMove({ cards: bp.move.cards, info: bp.move.info });
+            if (bp.move && UI.game.humanMove({ cards: bp.move.cards, info: bp.move.info })) return;
+            if (UI.game.humanMove(null)) return;
+            // 兜底：建议与过牌都被拒时改走首个合法走法，保证自动演示不卡死
+            var st = UI.game.state();
+            var mvs = st.lastPlay ? DD.followMoves(st.players[HUMAN].hand, st.tableLevel, st.lastPlay.info)
+              : DD.leadingMoves(st.players[HUMAN].hand, st.tableLevel);
+            if (mvs.length) UI.game.humanMove({ cards: mvs[0].cards, info: mvs[0].info });
             else UI.game.humanMove(null);
           }, 300);
         }

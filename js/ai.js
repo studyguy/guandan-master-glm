@@ -191,6 +191,11 @@
     var hand = view.me.hand, level = view.level;
     var moves = DD.legalMoves(hand, level, view.lastPlay);
     if (!moves.length) return { move: null, reason: 'NONE' };
+    // 领出位不允许"过"（规则上无牌可压时必须领出）
+    function forceLead(r) {
+      if (!view.lastPlay && !r.move) r = { move: moves[0], reason: 'FORCE_LEAD' };
+      return r;
+    }
 
     if (difficulty === 'easy') {
       for (var i = 0; i < moves.length; i++) if (moves[i].cards.length === hand.length) return { move: moves[i], reason: 'WIN' };
@@ -201,10 +206,10 @@
       var bp = DD.bestPlay(view);
       if (bp.move && bp.reason === 'SAVE' && Math.random() < 0.4) {
         // 进阶偶尔也忍
-        return { move: null, reason: 'SAVE' };
+        return forceLead({ move: null, reason: 'SAVE' });
       }
-      return bp;
+      return forceLead(bp);
     }
-    return DD.bestPlay(view);
+    return forceLead(DD.bestPlay(view));
   };
 })(typeof self !== 'undefined' ? self : globalThis);
