@@ -419,6 +419,7 @@
         renderAll(st);
         if (UI.autoplay) {
           setTimeout(function () {
+            if (!UI.game) return; // 已退出对局
             var v = UI.game.viewFor(HUMAN);
             var bp = DD.bestPlay(v);
             if (bp.move && UI.game.humanMove({ cards: bp.move.cards, info: bp.move.info })) return;
