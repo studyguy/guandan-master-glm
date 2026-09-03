@@ -69,8 +69,9 @@
     } else {
       var red = DD.SUITS[c.s].red;
       if (red) e.classList.add('red');
-      var cap = (c.s === 1 && isWild) ? '✦' : DD.RANK_NAME[c.v];
-      e.innerHTML = '<div class="corner">' + cap + '<i>' + DD.SUITS[c.s].sym + '</i></div><div class="pip">' + DD.SUITS[c.s].sym + '</div>';
+      e.innerHTML = '<div class="corner">' + DD.RANK_NAME[c.v] + '<i>' + DD.SUITS[c.s].sym + '</i></div>' +
+        (isWild ? '<i class="wild-mark">✦</i>' : '') +
+        '<div class="pip">' + (isWild ? '✦' : DD.SUITS[c.s].sym) + '</div>';
       if (isWild) e.classList.add('wild');
     }
     return e;

@@ -104,6 +104,9 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 .joker-big .jk { color: #c33; } .joker-small .jk { color: #333; }
 .card.wild { box-shadow: 0 0 0 1px #c33, 0 0 8px rgba(255,80,80,.55); }
 .card.wild .corner { color: #c33; }
+/* 逢人配（红桃级牌万能配）✦ 角标：右上角 */
+.card .wild-mark { position: absolute; top: 4%; right: 5%; font-style: normal;
+  font-size: max(9px, calc(var(--card-w) * 0.18)); color: #c33; line-height: 1; font-weight: bold; }
 .card.small { width: calc(var(--card-w) * 0.72); height: calc(var(--card-h) * 0.72); }
 .card.small .corner { font-size: calc(var(--card-w) * 0.19); }
 .card.small .corner i { font-size: calc(var(--card-w) * 0.14); }
