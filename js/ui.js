@@ -13,7 +13,7 @@
   var ME_TEAM = 0;
 
   var UI = DD.UI = {
-    settings: { difficulty: 'easy', coach: true, counter: true, sound: true, coachOpen: true, counterFolded: false, rotateDismissed: false, sortMode: 'rank' },
+    settings: { difficulty: 'easy', coach: true, counter: true, sound: true, coachOpen: true, counterFolded: false, rotateDismissed: false, sortMode: 'smart' },
     game: null,
     selected: {}, advice: null, plans: [],
     selectedPlanKey: null, review: '', analysisOpen: false,
@@ -33,6 +33,8 @@
     try {
       if (isMobileLayout() && !localStorage.getItem('dd_trainer_settings')) UI.settings.coachOpen = false;
     } catch (e) { /* ignore */ }
+    // 旧版"花色排序"已升级为智能理牌
+    if (UI.settings.sortMode === 'suit') UI.settings.sortMode = 'smart';
     DD.SFX.enabled = UI.settings.sound !== false;
   }
   function saveSettings() { try { localStorage.setItem('dd_trainer_settings', JSON.stringify(UI.settings)); } catch (e) { /* */ } }
@@ -113,11 +115,25 @@
     // 报牌提示：≤报牌张数时常驻红点
     seat.classList.toggle('reporting', !si.p.finished && si.p.count > 0 && si.p.count <= DD.RULES.reportAt);
   }
-  // 对家亮牌小扇形
+  // 对家亮牌小扇形（宽度自适应：不超过牌桌宽的 45%，避免压到右上角记牌器）
   function renderFanPartner(st) {
     var box = $('#fan-2');
     box.innerHTML = '';
-    DD.sortByLevel(st.players[2].hand, st.tableLevel).forEach(function (c) { box.appendChild(cardEl(c, true)); });
+    var cards = DD.sortByLevel(st.players[2].hand, st.tableLevel);
+    var n = cards.length;
+    if (!n) return;
+    var probe = cardEl(cards[0], true);
+    box.appendChild(probe);
+    var cw = probe.offsetWidth || 30;
+    var table = $('#table');
+    var maxW = Math.max(cw * 2, (table ? table.clientWidth : window.innerWidth) * 0.42);
+    var step = n > 1 ? Math.min(cw * 0.55, (maxW - cw) / (n - 1)) : 0;
+    box.removeChild(probe);
+    cards.forEach(function (c, k) {
+      var e = cardEl(c, true);
+      if (k > 0) e.style.marginLeft = (step - cw).toFixed(1) + 'px';
+      box.appendChild(e);
+    });
   }
   function renderFansOpponents(st) {
     [1, 3].forEach(function (i) {
@@ -172,14 +188,25 @@
   function renderHand(st) {
     var box = $('#hand');
     box.innerHTML = '';
-    var suitMode = UI.settings.sortMode === 'suit';
-    var sorted = suitMode ? DD.sortBySuit(st.players[HUMAN].hand) : DD.sortByLevel(st.players[HUMAN].hand, st.tableLevel);
+    var raw = st.players[HUMAN].hand;
+    var sorted, marks = [];
+    if (UI.settings.sortMode === 'smart') {
+      // 智能理牌：王→炸弹→同花色连张(同顺)→三张→对子→单张，组间留间隔
+      var r = DD.arrangeHandSmart(raw, st.tableLevel);
+      sorted = r.cards; marks = r.marks;
+    } else {
+      sorted = DD.sortByLevel(raw, st.tableLevel);
+    }
+    var markByIdx = {};
+    marks.forEach(function (m) { markByIdx[m.idx] = m; });
     sorted.forEach(function (c, idx) {
       var e = cardEl(c, false);
       if (UI.selected[c.id]) e.classList.add('sel');
-      // 花色理牌：分组边界留出视觉间隔，一眼区分同花色连张
-      if (suitMode && idx > 0 && sorted[idx - 1].s !== c.s) e.dataset.gap = '1';
-      else if (e.dataset.gap) delete e.dataset.gap;
+      var m = markByIdx[idx];
+      if (m) {
+        e.dataset.gap = '1';
+        if (m.tag === '同顺') e.classList.add('tongshun'); // 同花色连张徽章（同花顺机会）
+      }
       e.addEventListener('click', function () {
         var now = Date.now();
         if (UI._lastTap && UI._lastTap.id === c.id && now - UI._lastTap.t < 350) { UI._lastTap = null; quickPlay(c); return; }
@@ -197,12 +224,17 @@
     var box = $('#hand'); var n = box.children.length; if (!n) return;
     // 实测卡宽（--card-w 在桌面端是 clamp 表达式，getComputedStyle 取不到数值）
     var cw = box.children[0].offsetWidth || 44;
-    var reserve = isMobileLayout() ? 140 : 320;
-    var avail = Math.max(cw, window.innerWidth - reserve);
-    var shift = n > 1 ? Math.min(cw * 0.55, (avail - cw) / (n - 1)) : 0;
+    var table = document.getElementById('table');
+    var tw = table && table.clientWidth ? table.clientWidth : window.innerWidth;
+    var avail = Math.max(cw, tw - 24);
+    // 分组间隔计入总宽预算，保证理牌组不把整行撑出牌桌
+    var gapExtra = Math.max(8, cw * 0.22);
+    var extras = 0;
+    for (var g = 1; g < n; g++) if (box.children[g].dataset && box.children[g].dataset.gap) extras += gapExtra;
+    var shift = n > 1 ? Math.min(cw * 0.55, (avail - cw - extras) / (n - 1) + cw) : 0;
     for (var i = 0; i < n; i++) {
       var node = box.children[i];
-      var extra = node.dataset && node.dataset.gap ? Math.max(8, cw * 0.22) : 0;
+      var extra = node.dataset && node.dataset.gap ? gapExtra : 0;
       node.style.marginLeft = i === 0 ? '0px' : (shift - cw + extra).toFixed(1) + 'px';
     }
   }
@@ -594,13 +626,13 @@
       renderCoachShell(); if (UI.game) renderAll(UI.game.state());
     });
     $('#btn-sort-toggle').addEventListener('click', function () {
-      UI.settings.sortMode = UI.settings.sortMode === 'suit' ? 'rank' : 'suit';
+      UI.settings.sortMode = UI.settings.sortMode === 'smart' ? 'rank' : 'smart';
       saveSettings();
-      this.textContent = '🔀 理牌：' + (UI.settings.sortMode === 'suit' ? '花色' : '大小');
+      this.textContent = UI.settings.sortMode === 'smart' ? '↩ 恢复理牌' : '🔀 智能理牌';
       DD.SFX && DD.SFX.play('click');
       if (UI.game) renderHand(UI.game.state());
     });
-    $('#btn-sort-toggle').textContent = '🔀 理牌：' + (UI.settings.sortMode === 'suit' ? '花色' : '大小');
+    $('#btn-sort-toggle').textContent = UI.settings.sortMode === 'smart' ? '↩ 恢复理牌' : '🔀 智能理牌';
     $('#btn-sound-toggle').textContent = '🔊 音效';
     $('#btn-counter-toggle').textContent = '🔍 记牌器';
     $('#btn-coach-toggle').textContent = '🎓 教练';

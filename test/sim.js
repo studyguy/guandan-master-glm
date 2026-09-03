@@ -75,20 +75,35 @@ console.log('[1] 牌型/压制/万能配');
     return bj.rank === 16 && sj.rank === 15 && DD.moveLabel(bj) === '单张 大王' && DD.moveLabel(sj) === '单张 小王';
   })());
 
-  // 按花色理牌：♠♥♣♦ 分组连排、组内点数升序、王排最后（供花色理牌模式使用）
-  T('按花色理牌分组/升序/王最后', (function () {
-    var hand = mk([[5, 0], [9, 1], [3, 0], [14, 2], [16, -1], [5, 1], [15, -1], [4, 0], [10, 3]]);
-    var sorted = DD.sortBySuit(hand);
-    if (sorted.length !== hand.length) return false;
-    var lastKey = -1;
-    for (var i = 0; i < sorted.length; i++) {
-      var c = sorted[i];
-      var key = (c.s >= 0 ? c.s : 4) * 1000 + c.v * 10 + c.d;
-      if (key < lastKey) return false;
-      lastKey = key;
+  // 智能理牌：王→炸弹→同花色连张(同顺)→三张→对子→单张；不丢牌、组内升序
+  T('智能理牌分组完整且不丢牌', (function () {
+    var hand = mk([[3, 0], [3, 1], [3, 2], [3, 3], [5, 0], [5, 1], [5, 2],
+      [6, 0], [7, 0], [8, 0], [9, 1], [9, 2], [13, 3], [15, -1], [16, -1]]);
+    var r = DD.arrangeHandSmart(hand, 2);
+    if (r.cards.length !== hand.length) return false;              // 不丢牌
+    var ids = {};
+    r.cards.forEach(function (c) { if (ids[c.id]) return false; ids[c.id] = 1; });
+    var seq = r.cards.map(function (c) { return c.v + (c.s < 0 ? 100 : 0); });
+    // 王组在最前（两只王）；炸弹组（4 张 3）紧随其后；其后首张是三张 5
+    return seq[0] >= 100 && seq[1] >= 100 && seq[2] === 3 && seq[5] === 3 && seq[6] === 5;
+  })());
+  T('智能理牌提取同花色连张并标同顺', (function () {
+    // ♠4-5-6-7 同花色连张 + 干扰牌
+    var hand = mk([[4, 0], [5, 0], [6, 0], [7, 0], [2, 1], [10, 2], [10, 3], [13, 1]]);
+    var r = DD.arrangeHandSmart(hand, 2);
+    // 找到"同顺"组：4 张连张且同花色
+    var found = null;
+    for (var i = 0; i < r.cards.length - 3; i++) {
+      var win = r.cards.slice(i, i + 4);
+      var ok = win.every(function (c) { return c.s === 0; }) &&
+        win[0].v === 4 && win[1].v === 5 && win[2].v === 6 && win[3].v === 7;
+      if (ok) { found = i; break; }
     }
-    return sorted[0].v === 3 && sorted[0].s === 0        // ♠3 组首
-      && sorted[sorted.length - 1].v === 16;             // 大王收尾
+    if (found === null) return false;
+    if (found === 0) return true; // 首组无需标记
+    var mark = null;
+    r.marks.forEach(function (m) { if (m.idx <= found && (!mark || m.idx > mark)) mark = m.idx; });
+    return mark === found; // 连张位于分组起始处
   })());
 })();
 

@@ -99,6 +99,75 @@
     return { combos: comboN, hands: comboN };
   };
 
+  /**
+   * 智能理牌（仅用于展示排序，不影响出牌校验）：
+   * 组顺序 王 → 炸弹(同点≥4) → 同花色连张(≥3连，标"同顺"，同花顺机会) →
+   * 三张 → 对子 → 单张；组内按点数升序，组间由 UI 留间隔。
+   * @returns {{cards: Array, marks: Array<{idx:number, tag:string}>}}
+   *          cards 为理牌后的有序手牌；marks 记录分组起始下标（idx>0）。
+   */
+  DD.arrangeHandSmart = function (hand, level) {
+    var groups = [];
+    function addGroup(tag, cards) {
+      if (!cards.length) return;
+      cards = cards.slice().sort(function (a, b) { return a.v - b.v || a.d - b.d; });
+      groups.push({ tag: tag, cards: cards });
+    }
+
+    // 王（无花色，小王在前）
+    addGroup('王', hand.filter(function (c) { return c.s < 0; }));
+
+    var used = {};
+    function isUsed(c) { return used[c.id]; }
+    function take(cards) { cards.forEach(function (c) { used[c.id] = 1; }); }
+
+    // 炸弹：同点 ≥4（两副牌同点最多 8 张，全部归入）
+    var byV = {};
+    hand.forEach(function (c) { if (c.s >= 0) (byV[c.v] = byV[c.v] || []).push(c); });
+    Object.keys(byV).map(Number).sort(function (a, b) { return a - b; }).forEach(function (v) {
+      if (byV[v].length >= 4) {
+        var bomb = byV[v].filter(function (c) { return !isUsed(c); });
+        take(bomb); addGroup('炸', bomb);
+      }
+    });
+
+    // 同花色连张：每花色取剩余牌中"点数连续段"≥3 的（重复点数一并收拢），每次提取当前最长段
+    while (true) {
+      var best = null;
+      for (var suit = 0; suit < 4; suit++) {
+        var inSuit = {};
+        hand.forEach(function (c) {
+          if (c.s === suit && !isUsed(c)) inSuit[c.v] = (inSuit[c.v] || 0) + 1;
+        });
+        var run = [];
+        for (var v = 2; v <= 15; v++) {
+          if (inSuit[v]) run.push(v);
+          else {
+            if (run.length >= 3 && (!best || run.length > best.len)) best = { suit: suit, lo: run[0], hi: run[run.length - 1], len: run.length };
+            run = [];
+          }
+        }
+        if (run.length >= 3 && (!best || run.length > best.len)) best = { suit: suit, lo: run[0], hi: run[run.length - 1], len: run.length };
+      }
+      if (!best) break;
+      var cards = hand.filter(function (c) { return c.s === best.suit && !isUsed(c) && c.v >= best.lo && c.v <= best.hi; });
+      take(cards); addGroup('同顺', cards);
+    }
+
+    // 三张 / 对子 / 单张：按剩余点数归组，组内点数升序
+    addGroup('三张', hand.filter(function (c) { return c.s >= 0 && !isUsed(c) && (byV[c.v] || []).length === 3; }));
+    addGroup('对子', hand.filter(function (c) { return c.s >= 0 && !isUsed(c) && (byV[c.v] || []).length === 2; }));
+    addGroup('单张', hand.filter(function (c) { return c.s >= 0 && !isUsed(c) && (byV[c.v] || []).length === 1; }));
+
+    // 展平 + 分组起始标记
+    var cards = [], marks = [];
+    groups.forEach(function (g) {
+      if (cards.length) marks.push({ idx: cards.length, tag: g.tag });
+      g.cards.forEach(function (c) { cards.push(c); });
+    });
+    return { cards: cards, marks: marks };
+  };
+
   function enemyMin(view) {
     var mn = 99;
     view.players.forEach(function (p) {
