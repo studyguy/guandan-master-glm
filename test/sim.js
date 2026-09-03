@@ -111,7 +111,7 @@ console.log('[1] 牌型/压制/万能配');
       me: { idx: 0, hand: hand, team: 0 },
       players: [{ idx: 0, count: 3, team: 0, finished: false }, { idx: 1, count: 3, team: 1, finished: false },
                 { idx: 2, count: 3, team: 0, finished: false }, { idx: 3, count: 3, team: 1, finished: false }],
-      lastPlay: null, played: { '2': 4, '14': 4, '15': 2, '16': 2 }, // 更大的牌（级牌2/A/双王）全部现身
+      lastPlay: null, played: { '2': 8, '14': 8, '15': 2, '16': 2 }, // 更大的牌（级牌2×8/A×8/双王）全部现身
       level: 2, turn: 0
     };
     var r = DD.bestPlayHard(view);

@@ -192,19 +192,37 @@
       var st = tryRun(1, 5, 5);
       if (st) return st;
     }
-    // 连对（≥3 组对）
-    for (var g2 = 3; g2 <= 7; g2++) {
-      if (n === g2 * 2) {
-        var ds = tryRun(2, g2, g2 * 2);
-        if (ds) return ds;
+    // 连对：恰好三连对（6 张 = 3 个连续点数 × 各 2 张；规则无二连对/四连对及以上）
+    if (n === 6) {
+      var lo6, ok6, used6, vv6;
+      for (lo6 = 3; lo6 + 2 <= 14; lo6++) {
+        ok6 = true; used6 = 0;
+        for (vv6 = lo6; vv6 < lo6 + 3; vv6++) {
+          var c6 = natCnt[vv6] || 0;
+          if (c6 > 2) { ok6 = false; break; }
+          used6 += c6;
+        }
+        if (!ok6) continue;
+        if (used6 + w !== 6) continue; // 万能配恰好补齐缺口（配不能剩余）
+        return mk('DSTRAIGHT', DD.effOf(lo6 + 2, level), { len: 3, low: lo6, high: lo6 + 2 });
       }
+      return null;
     }
-    // 钢板（≥2 组三同张）
-    for (var g3 = 2; g3 <= 5; g3++) {
-      if (n === g3 * 3) {
-        var ts = tryRun(3, g3, g3 * 3);
-        if (ts) return ts;
+    // 钢板：恰好 2~3 组连续三同张（6/9 张；万能配可补位）
+    if (n === 6 || n === 9) {
+      var gN = n / 3, loT, okT, usedT, vvT;
+      for (loT = 3; loT + gN - 1 <= 14; loT++) {
+        okT = true; usedT = 0;
+        for (vvT = loT; vvT < loT + gN; vvT++) {
+          var cT = natCnt[vvT] || 0;
+          if (cT > 3) { okT = false; break; }
+          usedT += cT;
+        }
+        if (!okT) continue;
+        if (usedT + w !== n) continue; // 万能配恰好补齐缺口（配不能剩余）
+        return mk('TRIPLE_SEQ', DD.effOf(loT + gN - 1, level), { len: gN, low: loT, high: loT + gN - 1 });
       }
+      return null;
     }
 
     // ===== 三同张 / 三带二 =====

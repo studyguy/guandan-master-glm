@@ -122,7 +122,7 @@
   }
   function cntRestore(cnt, v, n) { cnt[v] = (cnt[v] || 0) + n; }
 
-  /** 最少几手出完（记忆化 DFS；hand ≤ 10 张时调用，节点预算防失控） */
+  /** 最少几手出完（记忆化 DFS 精确搜索；hand ≤ 10 张时调用，节点预算防失控） */
   DD.minHandsExact = function (cards, level) {
     var cnt = {};
     cards.forEach(function (c) {
@@ -130,99 +130,11 @@
       cnt[key] = (cnt[key] || 0) + 1;
     });
     var memo = {};
-    var budget = { n: 60000 };
+    var budget = { n: 120000 };
     function dfs(st) {
       var key = stateKey(st);
       if (memo[key] != null) return memo[key];
-      if (budget.n-- <= 0) return 99;
-      // 剩余牌总数
-      var total = 0, v;
-      for (v = 2; v <= 14; v++) total += st[v] || 0;
-      total += (st['J15'] || 0) + (st['J16'] || 0);
-      if (total === 0) { memo[key] = 0; return 0; }
-      var best = 99;
-      function tryHand(take, undo) {
-        take();
-        var sub = dfs(st);
-        if (1 + sub < best) best = 1 + sub;
-        undo();
-      }
-      // 同点数 1/2/3 张 或 炸弹（≥4 全出）
-      for (v = 2; v <= 14; v++) {
-        var n = st[v] || 0;
-        if (n >= 1) (function (vv) { tryHand(function () { cntTake(st, vv, 1); }, function () { cntRestore(st, vv, 1); }); })(v);
-        if (n >= 2) (function (vv) { tryHand(function () { cntTake(st, vv, 2); }, function () { cntRestore(st, vv, 2); }); })(v);
-        if (n >= 3) (function (vv) { tryHand(function () { cntTake(st, vv, 3); }, function () { cntRestore(st, vv, 3); }); })(v);
-        if (n >= 4) (function (vv, all) { tryHand(function () { cntTake(st, vv, all); }, function () { cntRestore(st, vv, all); }); })(v, n);
-      }
-      // 顺子（5 连，含 A2345）
-      for (var lo = 3; lo <= 10; lo++) {
-        if (st[lo] && st[lo + 1] && st[lo + 2] && st[lo + 3] && st[lo + 4]) {
-          [lo, lo + 1, lo + 2, lo + 3, lo + 4].forEach(function (vv) { cntTake(st, vv, 1); });
-          tryHand(function () {}, function () {});
-          [lo, lo + 1, lo + 2, lo + 3, lo + 4].forEach(function (vv) { cntRestore(st, vv, 1); });
-        }
-      }
-      if (st[14] && st[2] && st[3] && st[4] && st[5]) {
-        [14, 2, 3, 4, 5].forEach(function (vv) { cntTake(st, vv, 1); });
-        tryHand(function () {}, function () {});
-        [14, 2, 3, 4, 5].forEach(function (vv) { cntRestore(st, vv, 1); });
-      }
-      // 连对（≥3 连续点数，各出 2）
-      var L;
-      for (L = 3; L <= 8; L++) {
-        for (lo = 3; lo + L - 1 <= 14; lo++) {
-          var okRun = true;
-          for (v = lo; v < lo + L; v++) if (!(st[v] >= 2)) { okRun = false; break; }
-          if (okRun) {
-            (function (lo2, L2) {
-              for (v = lo2; v < lo2 + L2; v++) cntTake(st, v, 2);
-              tryHand(function () {}, function () {});
-              for (v = lo2; v < lo2 + L2; v++) cntRestore(st, v, 2);
-            })(lo, L);
-          }
-        }
-      }
-      // 钢板（≥2 连续点数，各出 3）
-      for (L = 2; L <= 4; L++) {
-        for (lo = 3; lo + L - 1 <= 14; lo++) {
-          var ok3 = true;
-          for (v = lo; v < lo + L; v++) if (!(st[v] >= 3)) { ok3 = false; break; }
-          if (ok3) {
-            (function (lo2, L2) {
-              for (v = lo2; v < lo2 + L2; v++) cntTake(st, v, 3);
-              tryHand(function () {}, function () {});
-              for (v = lo2; v < lo2 + L2; v++) cntRestore(st, v, 3);
-            })(lo, L);
-          }
-        }
-      }
-      // 三带二
-      for (v = 2; v <= 14; v++) {
-        if (!(st[v] >= 3)) continue;
-        for (var w = 2; w <= 14; w++) {
-          if (w === v || !(st[w] >= 2)) continue;
-          cntTake(st, v, 3); cntTake(st, w, 2);
-          tryHand(function () {}, function () {});
-          cntRestore(st, v, 3); cntRestore(st, w, 2);
-        }
-      }
-      // 四王炸
-      if ((st['J15'] || 0) >= 2 && (st['J16'] || 0) >= 2) {
-        st['J15'] -= 2; st['J16'] -= 2;
-        tryHand(function () {}, function () {});
-        st['J15'] += 2; st['J16'] += 2;
-      }
-      // 王单张
-      if (st['J15'] >= 1) { st['J15'] -= 1; tryHand(function () {}, function () {}); st['J15'] += 1; }
-      if (st['J16'] >= 1) { st['J16'] -= 1; tryHand(function () {}, function () {}); st['J16'] += 1; }
-      memo[key] = best;
-      return best;
-    }
-    function dfs(st) {
-      var key = stateKey(st);
-      if (memo[key] != null) return memo[key];
-      if (budget.n-- <= 0) return 99;
+      if (budget.n-- <= 0) return 99; // 预算耗尽不写 memo，避免污染
       var total = 0, v;
       for (v = 2; v <= 14; v++) total += st[v] || 0;
       total += (st['J15'] || 0) + (st['J16'] || 0);
@@ -231,53 +143,49 @@
       // 同点数 1/2/3 张 或 炸弹（≥4 全出）
       for (v = 2; v <= 14; v++) {
         var n = st[v] || 0;
-        if (n >= 1 && best > 1) { st[v] = n - 1; var sub = dfs(st); st[v] = n; if (1 + sub < best) best = 1 + sub; }
-        if (n >= 2 && best > 2) { st[v] = n - 2; sub = dfs(st); st[v] = n; if (2 + sub < best) best = 2 + sub; }
-        if (n >= 3 && best > 3) { st[v] = n - 3; sub = dfs(st); st[v] = n; if (3 + sub < best) best = 3 + sub; }
-        if (n >= 4) { st[v] = 0; sub = dfs(st); st[v] = n; if (1 + sub < best) best = 1 + sub; }
+        if (n >= 1) { st[v] = n - 1; var s1 = dfs(st); st[v] = n; if (1 + s1 < best) best = 1 + s1; }
+        if (n >= 2) { st[v] = n - 2; var s2 = dfs(st); st[v] = n; if (1 + s2 < best) best = 1 + s2; }
+        if (n >= 3) { st[v] = n - 3; var s3 = dfs(st); st[v] = n; if (1 + s3 < best) best = 1 + s3; }
+        if (n >= 4) { var keep = st[v]; st[v] = 0; var s4 = dfs(st); st[v] = keep; if (1 + s4 < best) best = 1 + s4; }
       }
       // 顺子（5 连，含 A2345）
-      var lo, v2, i2, seg;
+      var lo, v2;
       for (lo = 3; lo <= 10; lo++) {
         var okS = true;
         for (v2 = lo; v2 < lo + 5; v2++) if (!(st[v2] >= 1)) { okS = false; break; }
         if (okS) {
-          seg = [lo, lo + 1, lo + 2, lo + 3, lo + 4];
-          seg.forEach(function (vv) { st[vv]--; });
-          var s1 = dfs(st);
-          seg.forEach(function (vv) { st[vv]++; });
-          if (1 + s1 < best) best = 1 + s1;
+          for (v2 = lo; v2 < lo + 5; v2++) st[v2]--;
+          var sA = dfs(st);
+          for (v2 = lo; v2 < lo + 5; v2++) st[v2]++;
+          if (1 + sA < best) best = 1 + sA;
         }
       }
       if (st[14] && st[2] && st[3] && st[4] && st[5]) {
         st[14]--; st[2]--; st[3]--; st[4]--; st[5]--;
-        var s2 = dfs(st);
+        var sB = dfs(st);
         st[14]++; st[2]++; st[3]++; st[4]++; st[5]++;
-        if (1 + s2 < best) best = 1 + s2;
+        if (1 + sB < best) best = 1 + sB;
       }
-      // 连对（≥3 连续点数，各出 2）
-      for (var L = 3; L <= 8; L++) {
-        for (lo = 3; lo + L - 1 <= 14; lo++) {
-          var okP = true;
-          for (v2 = lo; v2 < lo + L; v2++) if (!(st[v2] >= 2)) { okP = false; break; }
-          if (okP) {
-            for (v2 = lo; v2 < lo + L; v2++) st[v2] -= 2;
-            var s3 = dfs(st);
-            for (v2 = lo; v2 < lo + L; v2++) st[v2] += 2;
-            if (1 + s3 < best) best = 1 + s3;
-          }
-        }
+      // 连对：仅三连对（3 个连续点数各出 2；规则无二连对/四连对及以上）
+      var lo3 = 3;
+      var okP = true;
+      for (v2 = lo3; v2 < lo3 + 3; v2++) if (!(st[v2] >= 2)) { okP = false; break; }
+      if (okP) {
+        for (v2 = lo3; v2 < lo3 + 3; v2++) st[v2] -= 2;
+        var sC = dfs(st);
+        for (v2 = lo3; v2 < lo3 + 3; v2++) st[v2] += 2;
+        if (1 + sC < best) best = 1 + sC;
       }
-      // 钢板（≥2 连续点数，各出 3）
-      for (var M = 2; M <= 4; M++) {
-        for (lo = 3; lo + M - 1 <= 14; lo++) {
+      // 钢板：2~3 组连续三同张（各出 3）
+      for (var gT = 2; gT <= 3; gT++) {
+        for (var loT = 3; loT + gT - 1 <= 14; loT++) {
           var okT = true;
-          for (v2 = lo; v2 < lo + M; v2++) if (!(st[v2] >= 3)) { okT = false; break; }
+          for (v2 = loT; v2 < loT + gT; v2++) if (!(st[v2] >= 3)) { okT = false; break; }
           if (okT) {
-            for (v2 = lo; v2 < lo + M; v2++) st[v2] -= 3;
-            var s4 = dfs(st);
-            for (v2 = lo; v2 < lo + M; v2++) st[v2] += 3;
-            if (1 + s4 < best) best = 1 + s4;
+            for (v2 = loT; v2 < loT + gT; v2++) st[v2] -= 3;
+            var sD = dfs(st);
+            for (v2 = loT; v2 < loT + gT; v2++) st[v2] += 3;
+            if (1 + sD < best) best = 1 + sD;
           }
         }
       }
@@ -287,17 +195,17 @@
         for (var w = 2; w <= 14; w++) {
           if (w === v || !(st[w] >= 2)) continue;
           st[v] -= 3; st[w] -= 2;
-          var s5 = dfs(st);
+          var sE = dfs(st);
           st[v] += 3; st[w] += 2;
-          if (1 + s5 < best) best = 1 + s5;
+          if (1 + sE < best) best = 1 + sE;
         }
       }
       // 四王炸
       if ((st['J15'] || 0) >= 2 && (st['J16'] || 0) >= 2) {
         st['J15'] -= 2; st['J16'] -= 2;
-        var s6 = dfs(st);
+        var sF = dfs(st);
         st['J15'] += 2; st['J16'] += 2;
-        if (1 + s6 < best) best = 1 + s6;
+        if (1 + sF < best) best = 1 + sF;
       }
       // 王单张
       if (st['J15'] >= 1) { st['J15'] -= 1; var a1 = dfs(st); st['J15'] += 1; if (1 + a1 < best) best = 1 + a1; }

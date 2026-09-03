@@ -98,8 +98,8 @@
       }
       push(res, cS, level); // analyze 会正确归类 FLUSH/STRAIGHT
     }
-    // ---- 连对（3..7 组）----
-    for (var gn = 3; gn <= 7; gn++) {
+    // ---- 连对（恰好三连对；规则无二连对/四连对及以上）----
+    for (var gn = 3; gn <= 3; gn++) {
       for (var st2 = 1; st2 + gn - 1 <= 14; st2++) {
         if (!DD.RULES.a2345 && st2 === 1) continue;
         var need = [];
@@ -108,8 +108,8 @@
         if (cardsD) push(res, cardsD, level);
       }
     }
-    // ---- 钢板（2..5 组三同张）----
-    for (var g3 = 2; g3 <= 5; g3++) {
+    // ---- 钢板（2..3 组三同张）----
+    for (var g3 = 2; g3 <= 3; g3++) {
       for (var st3 = 1; st3 + g3 - 1 <= 14; st3++) {
         if (!DD.RULES.a2345 && st3 === 1) continue;
         var need3 = [];
