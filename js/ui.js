@@ -124,10 +124,14 @@
       var box = $('#fan-' + i);
       box.innerHTML = '';
       var n = st.players[i].count;
-      // 动态压缩重叠：扇形总高不超过桌面高的 42%（mini2 背牌固定 22x30）
-      var cardH = 30;
+      if (!n) return;
+      // 动态压缩重叠：扇形总高不超过桌面高的 42%（卡高按实际渲染尺寸测量，随视口缩放）
+      var probe = el('div', 'card back mini2');
+      box.appendChild(probe);
+      var cardH = probe.offsetHeight || 30;
       var maxH = Math.max(120, Math.round(window.innerHeight * 0.42));
       var step = n > 1 ? Math.min(16, (maxH - cardH) / (n - 1)) : 0;
+      box.removeChild(probe);
       for (var k = 0; k < n; k++) {
         var c = el('div', 'card back mini2');
         if (k > 0) c.style.marginTop = (step - cardH).toFixed(1) + 'px';
@@ -186,7 +190,8 @@
   }
   function layoutHand() {
     var box = $('#hand'); var n = box.children.length; if (!n) return;
-    var cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 44;
+    // 实测卡宽（--card-w 在桌面端是 clamp 表达式，getComputedStyle 取不到数值）
+    var cw = box.children[0].offsetWidth || 44;
     var reserve = isMobileLayout() ? 140 : 320;
     var avail = Math.max(cw, window.innerWidth - reserve);
     var shift = n > 1 ? Math.min(cw * 0.55, (avail - cw) / (n - 1)) : 0;

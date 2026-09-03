@@ -97,6 +97,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    bindHome();      // 主页交互（难度/开始/教程/开关）——曾遗漏调用导致主页按钮全部失效
     DD.boot();
     initAutotest();
   });
