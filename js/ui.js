@@ -23,7 +23,7 @@
     '🐻', '🐮', '🐴', '🐧', '🐣', '🦜'];
 
   var UI = DD.UI = {
-    settings: { difficulty: 'easy', coach: true, counter: true, counterFolded: false, rotateDismissed: false, sortMode: 'smart' },
+    settings: { difficulty: 'easy', coach: true, counter: true, rotateDismissed: false, sortMode: 'smart' },
     game: null,
     selected: {}, locked: {}, advice: null, plans: [],
     selectedPlanKey: null, review: '', analysisOpen: false,
@@ -82,8 +82,8 @@
     var box = $('#counter');
     if (!UI.settings.counter) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
-    // 窄屏默认折叠为小 pill（本次会话内点开后保持展开，不覆盖用户桌面端的持久化选择）
-    var folded = UI.settings.counterFolded || (isMobileLayout() && !UI.counterOpenMobile);
+    // 窄屏默认折叠为小 pill 省空间（点 pill 或顶栏开关展开后，会话内保持展开）
+    var folded = isMobileLayout() && !UI.counterOpenMobile;
     if (folded) { box.classList.add('folded'); return; }
     box.classList.remove('folded');
     var acc = function (v) { return UI.playedAcc[v] || 0; };
@@ -688,8 +688,7 @@
     $('#hand').addEventListener('contextmenu', function (ev) { ev.preventDefault(); cancelAllSelection(); });
     $('#btn-coach-close').addEventListener('click', function (e) { e.stopPropagation(); setCoachOpen(false); });
     $('#side-backdrop').addEventListener('click', function () { setCoachOpen(false); });
-    $('#btn-counter-fold').addEventListener('click', function (e) { e.stopPropagation(); DD.SFX && DD.SFX.play('fold'); UI.settings.counterFolded = true; UI.counterOpenMobile = false; saveSettings(); if (UI.game) renderCounter(UI.game.state()); });
-    $('#counter').addEventListener('click', function () { if (UI.settings.counterFolded || UI.counterOpenMobile !== true) { DD.SFX && DD.SFX.play('unfold'); UI.settings.counterFolded = false; UI.counterOpenMobile = true; saveSettings(); if (UI.game) renderCounter(UI.game.state()); } });
+    $('#counter').addEventListener('click', function () { if (isMobileLayout() && !UI.counterOpenMobile) { UI.counterOpenMobile = true; DD.SFX && DD.SFX.play('unfold'); if (UI.game) renderCounter(UI.game.state()); } });
     window.addEventListener('resize', function () {
       layoutHand(); renderCoachShell(); checkRotateHint();
       if (UI.game && !$('#screen-game').classList.contains('hidden')) renderFansOpponents(UI.game.state());
@@ -704,6 +703,7 @@
       DD.SFX && DD.SFX.play('click');
       UI.settings.counter = !UI.settings.counter; saveSettings();
       this.textContent = '🔍 记牌器' + (UI.settings.counter ? '' : '：关');
+      if (UI.settings.counter) UI.counterOpenMobile = true; // 开关打开 = 直接展开显示
       if (UI.game) renderCounter(UI.game.state());
     });
     $('#btn-coach-toggle').addEventListener('click', function () {
