@@ -261,6 +261,12 @@
     return {
       start: function () {
         M.levels = [2, 2]; M.aFails = [0, 0]; M.tableLevel = 2; M.levelOwner = -1; M.hand = 0;
+        // 每场随机抽取起始级牌（2~K，双方同打；标准规则可经 rules.randomStartLevel 关闭）
+        if (DD.RULES.randomStartLevel) {
+          var lv = DD.LEVELS[Math.floor(Math.random() * (DD.LEVELS.length - 1))];
+          M.levels = [lv, lv];
+          M.tableLevel = lv;
+        }
         dealHand(-1);
       },
       humanMove: humanMove,

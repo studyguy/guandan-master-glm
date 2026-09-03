@@ -254,7 +254,7 @@ function runSession() {
   // 完整一场（直到过 A）
   var res = await runSession();
   T('完整一场直到过A ' + JSON.stringify(res.ok ? { hands: res.hands, winner: res.winner, levels: res.levels } : res),
-    res.ok && res.winner >= 0 && res.hands >= 3);
+    res.ok && res.winner >= 0 && res.hands >= 2); // 随机起始级牌后，从 K 起步最快 2 手即可过 A
 
   // 回归：三家全过 → 领出者直接再领出（不再要求领出者自过；旧阈值多算曾致人类玩家死局）
   // 注：引擎首局领出位随机，故记录实际首领者 L，断言一圈全过后回到 L。
