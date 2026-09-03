@@ -219,7 +219,9 @@
           var now = Date.now();
           if (UI._lastTap && UI._lastTap.id === c.id && now - UI._lastTap.t < 350) { UI._lastTap = null; quickPlay(c); return; }
           UI._lastTap = { id: c.id, t: now };
+          var wasArmed = UI.selectedPlanKey != null;
           UI.selectedPlanKey = null; clearHint();
+          if (wasArmed) renderPlans(UI.game.viewFor(HUMAN));
           if (UI.selected[c.id]) { delete UI.selected[c.id]; e.classList.remove('sel'); }
           else { UI.selected[c.id] = c; e.classList.add('sel'); }
           updateComboLabel(st);
@@ -388,8 +390,12 @@
         if (st0.phase !== 'playing' || st0.turn !== HUMAN) return;
         if (UI.selectedPlanKey === planKey(p)) { playPlan(p); return; }
         UI.selectedPlanKey = planKey(p);
+        // 方案牌同步为真实选中：手动点出牌按钮 / 空格也能打出
+        UI.selected = {};
+        if (p.move) p.move.cards.forEach(function (c) { UI.selected[c.id] = c; });
+        renderHand(st0);
         renderPlans(UI.game.viewFor(HUMAN));
-        if (p.move) highlight(p.move.cards); else clearHint();
+        if (p.move) { highlight(p.move.cards); updateComboLabel(st0); } else clearHint();
       });
       box.appendChild(row);
     });
@@ -408,7 +414,7 @@
   }
   function highlight(cards) {
     var ids = {}; cards.forEach(function (c) { ids[c.id] = 1; });
-    $$('#hand .card').forEach(function (e) { e.classList.toggle('hinted', !!ids[e.dataset.id] && !UI.selected[e.dataset.id]); });
+    $$('#hand .card').forEach(function (e) { e.classList.toggle('hinted', !!ids[e.dataset.id]); });
   }
   function playPlan(p) {
     var st = UI.game.state();
@@ -663,7 +669,7 @@
       if (st.phase !== 'playing' || st.turn !== HUMAN) return;
       if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); onPlay(); }
       else if (e.code === 'KeyP') onPass();
-      else if (e.code === 'Escape') { UI.selected = {}; renderHand(st); updateComboLabel(st); }
+      else if (e.code === 'Escape') { UI.selected = {}; UI.selectedPlanKey = null; renderHand(st); updateComboLabel(st); renderPlans(UI.game.viewFor(HUMAN)); }
     });
   }
 
