@@ -110,6 +110,8 @@
     $('#role-' + idx).textContent = si.role;
     $('#count-' + idx).textContent = si.p.finished ? '' : (si.p.count + ' 张');
     seat.classList.toggle('active', !si.p.finished && st.turn === idx);
+    // 报牌提示：≤报牌张数时常驻红点
+    seat.classList.toggle('reporting', !si.p.finished && si.p.count > 0 && si.p.count <= DD.RULES.reportAt);
   }
   // 对家亮牌小扇形
   function renderFanPartner(st) {
@@ -375,7 +377,15 @@
         (p.team === ME_TEAM ? '我方' : '对方') + '</td></tr>';
     });
     tb.innerHTML = html;
-    $('#over-extra').textContent = '我方 ' + levelT(d.levels[0]) + ' · 对方 ' + levelT(d.levels[1]) + '（下一手打 ' + levelT(d.levels[d.winnerTeam]) + '）';
+    // 级牌推进图示：胜方 旧级 ➜ 新级（+n），失败方不动
+    var winnerName = iWonHand ? '我方' : '对方';
+    var loserName = iWonHand ? '对方' : '我方';
+    var loserLv = d.levels[1 - d.winnerTeam];
+    var prog = d.passedA
+      ? winnerName + ' 打 A ➜ 过 A 成功 🎉 · ' + loserName + ' ' + levelT(loserLv)
+      : winnerName + ' ' + levelT(d.levelBefore) + ' ➜ ' + levelT(d.levelAfter) + '（+' + d.rise + ' 级） · ' + loserName + ' ' + levelT(loserLv);
+    prog += '（下一手打 ' + levelT(d.levels[d.winnerTeam]) + '）';
+    $('#over-extra').textContent = prog;
     $('#modal-over').classList.remove('hidden');
   }
   function spawnConfetti(cont) {
@@ -450,7 +460,14 @@
         bubble(d.idx, UI.orderBadges[d.order], 2600);
         if (UI.settings.counter) renderCounter(UI.game.state());
         break;
-      case 'trickLead': clearPlays(); break;
+      case 'trickLead':
+        clearPlays();
+        if (d.windfall && d.leader !== HUMAN) {
+          bubble(d.leader, d.leader === 2 ? '对家接风！' : (st.players[d.leader].name + ' 接风'), 2200);
+        } else if (d.windfall) {
+          bubble(HUMAN, '你接风，继续出牌！', 2200);
+        }
+        break;
       case 'handOver': renderOver(d); break;
       case 'sessionOver': DD.SFX && DD.SFX.play(d.winnerTeam === ME_TEAM ? 'win' : 'lose'); renderSession(d); break;
     }

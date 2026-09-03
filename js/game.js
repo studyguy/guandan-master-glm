@@ -161,7 +161,7 @@
           var lead = players[winner].finished ? partnerOf(winner) : winner;
           if (players[lead].finished) lead = idxAfterSkip(winner); // 接风对象也已出完（双上局面）→ 顺延
           M.lastPlay = null; M.passAfterLast = 0;
-          emit('trickLead', { leader: lead });
+          emit('trickLead', { leader: lead, windfall: players[winner].finished });
           M.leader = lead; M.turn = lead;
           emit('state', snap());
           schedule();

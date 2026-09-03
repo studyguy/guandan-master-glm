@@ -112,6 +112,10 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 .p-name { font-weight: bold; }
 .p-role { color: #8fd6ff; }
 .p-count { color: var(--c-text-dim); }
+/* 报牌红点：剩余张数 ≤ 报牌阈值时常驻提示 */
+.pseat.reporting .p-count { color: #ff6b50; font-weight: bold; }
+.pseat.reporting .p-count::before { content: '●'; margin-right: 3px; animation: textPulse 1.2s ease-in-out infinite; }
+.pseat.reporting .seat-info { border-color: rgba(255,107,80,.55); }
 .pseat.active .seat-info { border-color: var(--c-accent); box-shadow: 0 0 12px rgba(255,215,106,.4); }
 .pseat.just-played .seat-info { border-color: #fff; }
 

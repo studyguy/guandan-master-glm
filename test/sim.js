@@ -226,9 +226,10 @@ function runSession() {
     res.ok && res.winner >= 0 && res.hands >= 3);
 
   // 回归：三家全过 → 领出者直接再领出（不再要求领出者自过；旧阈值多算曾致人类玩家死局）
+  // 注：引擎首局领出位随机，故记录实际首领者 L，断言一圈全过后回到 L。
   var trickClose = await (function () {
     return new Promise(function (resolve) {
-      var plays = 0, passes = 0, done = false;
+      var plays = 0, passes = 0, firstLeader = -1, done = false;
       var g = new DD.Game({
         players: [
           { name: 'A', type: 'human' }, { name: 'B', type: 'human' },
@@ -240,6 +241,7 @@ function runSession() {
           if (ev === 'needPlay') {
             plays++;
             var st = g.state();
+            if (firstLeader < 0) firstLeader = st.turn;
             var hand = st.players[st.turn].hand;
             if (plays === 1) {
               var leads = DD.leadingMoves(hand, st.tableLevel);
@@ -251,15 +253,53 @@ function runSession() {
               g.humanMove(null);
             }
           }
-          if (ev === 'trickLead') { done = true; g.destroy(); resolve({ leader: d.leader, plays: plays, passes: passes }); }
-          if (ev === 'handOver') { done = true; g.destroy(); resolve({ leader: -9, plays: plays, passes: passes }); }
+          if (ev === 'trickLead') { done = true; g.destroy(); resolve({ leader: d.leader, firstLeader: firstLeader, plays: plays, passes: passes }); }
+          if (ev === 'handOver') { done = true; g.destroy(); resolve({ leader: -9, firstLeader: firstLeader, plays: plays, passes: passes }); }
         }
       });
       g.start();
     });
   })();
   T('三家全过后领出者直接再领出 ' + JSON.stringify(trickClose),
-    trickClose.leader === 0 && trickClose.plays === 4 && trickClose.passes === 3);
+    trickClose.leader === trickClose.firstLeader && trickClose.plays === 4 && trickClose.passes === 3);
+
+  // 回归：头游最后一手无人压 → 对家接风（trickLead 携带 windfall 标记）
+  // 让实际首领者一路单张领出（其余三家全过），打完 27 张成为头游后验证接风。
+  var windfall = await (function () {
+    return new Promise(function (resolve) {
+      var leaderPlays = 0, runner = -1, done = false;
+      var g = new DD.Game({
+        players: [
+          { name: 'A', type: 'human' }, { name: 'B', type: 'human' },
+          { name: 'C', type: 'human' }, { name: 'D', type: 'human' }
+        ],
+        botDelay: 0, autoNext: false,
+        onEvent: function (ev, d) {
+          if (done) return;
+          if (ev === 'needPlay') {
+            var st = g.state();
+            if (runner < 0) runner = st.turn;
+            if (st.turn === runner && !st.lastPlay) {
+              leaderPlays++;
+              var c = st.players[runner].hand[0];
+              g.humanMove({ cards: [c], info: DD.analyze([c], st.tableLevel) });
+            } else {
+              g.humanMove(null); // 其余三家全过，让首领者一路单张到底
+            }
+          }
+          if (ev === 'trickLead' && leaderPlays >= 27) {
+            done = true; g.destroy();
+            resolve({ windfall: d.windfall, leader: d.leader, partner: (runner + 2) % 4 });
+          }
+          if (ev === 'handOver') { done = true; g.destroy(); resolve({ windfall: null, leader: -9, partner: (runner + 2) % 4 }); }
+        }
+      });
+      g.start();
+      setTimeout(function () { if (!done) { done = true; g.destroy(); resolve({ windfall: null, leader: -9, partner: -9 }); } }, 5000);
+    });
+  })();
+  T('头游最后一手无人压 → 对家接风 ' + JSON.stringify(windfall),
+    windfall.windfall === true && windfall.leader === windfall.partner);
 
   console.log('\n========== 测试结果 ==========');
   console.log('通过 ' + pass + '，失败 ' + fail);
