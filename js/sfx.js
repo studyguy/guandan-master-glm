@@ -47,7 +47,7 @@
     try {
       bgm = new Audio('music/bgm.mp3');
       bgm.loop = true;
-      bgm.volume = 0.245; // 原音量的 70%
+      bgm.volume = 0.175; // 原音量的 50%
     } catch (e) { bgm = null; }
     function bgmSync() {
       if (!bgm) return;
@@ -142,65 +142,65 @@
   var LIB = {
     // —— 对局事件 ——
     deal: function () { // 发牌：连续甩牌噪声簇
-      for (var i = 0; i < 8; i++) noise({ dur: 0.04, delay: i * 0.07, vol: 0.13, freq: 2200 + Math.random() * 900 });
+      for (var i = 0; i < 8; i++) noise({ dur: 0.04, delay: i * 0.07, vol: 0.1, freq: 2200 + Math.random() * 900 });
     },
     alarm: function () { // 报牌警告：短促两连
-      tone({ freq: 880, dur: 0.09, type: 'square', vol: 0.15 });
-      tone({ freq: 660, dur: 0.12, type: 'square', vol: 0.15, delay: 0.11 });
+      tone({ freq: 880, dur: 0.09, type: 'square', vol: 0.12 });
+      tone({ freq: 660, dur: 0.12, type: 'square', vol: 0.12, delay: 0.11 });
     },
     windfall: function () { // 接风：轻快上行双音
-      tone({ freq: 660, dur: 0.09, type: 'sine', vol: 0.26 });
-      tone({ freq: 990, dur: 0.14, type: 'sine', vol: 0.26, delay: 0.1 });
+      tone({ freq: 660, dur: 0.09, type: 'sine', vol: 0.24 });
+      tone({ freq: 990, dur: 0.14, type: 'sine', vol: 0.24, delay: 0.1 });
     },
     rank: function (order) { // 名次产生：头游华丽、二/三/末游递降
       var seq = order === 1 ? [784, 1047] : order === 2 ? [659] : order === 3 ? [523] : [392];
-      seq.forEach(function (f, i) { tone({ freq: f, dur: 0.12, type: 'triangle', vol: order === 1 ? 0.3 : 0.22, delay: i * 0.12 }); });
-      if (order === 1) tone({ freq: 1319, dur: 0.2, type: 'sine', vol: 0.18, delay: 0.24 });
+      seq.forEach(function (f, i) { tone({ freq: f, dur: 0.12, type: 'triangle', vol: order === 1 ? 0.28 : 0.22, delay: i * 0.12 }); });
+      if (order === 1) tone({ freq: 1319, dur: 0.2, type: 'sine', vol: 0.16, delay: 0.24 });
     },
     handWin: function () { // 本手胜：轻量上行短句
-      [523, 659, 784].forEach(function (f, i) { tone({ freq: f, dur: 0.1, type: 'triangle', vol: 0.26, delay: i * 0.1 }); });
+      [523, 659, 784].forEach(function (f, i) { tone({ freq: f, dur: 0.1, type: 'triangle', vol: 0.24, delay: i * 0.1 }); });
     },
     handLose: function () { // 本手负：轻量下行
-      tone({ freq: 440, dur: 0.12, type: 'triangle', vol: 0.24 });
-      tone({ freq: 349, dur: 0.18, type: 'triangle', vol: 0.24, delay: 0.13 });
+      tone({ freq: 440, dur: 0.12, type: 'triangle', vol: 0.22 });
+      tone({ freq: 349, dur: 0.18, type: 'triangle', vol: 0.22, delay: 0.13 });
     },
     fanfare: function () { // 过 A / 整场胜利：隆重钟声琶音 + 彩带沙沙
-      [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone({ freq: f, dur: 0.18, type: 'triangle', vol: 0.3, delay: i * 0.12 }); });
-      tone({ freq: 2093, dur: 0.5, type: 'sine', vol: 0.16, delay: 0.6 });
+      [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone({ freq: f, dur: 0.18, type: 'triangle', vol: 0.28, delay: i * 0.12 }); });
+      tone({ freq: 2093, dur: 0.5, type: 'sine', vol: 0.14, delay: 0.6 });
       noise({ dur: 0.5, delay: 0.2, vol: 0.05, freq: 6000 });
     },
     // —— UI 交互 ——
     select: function (count) { // 选牌：音高随已选张数微升
-      tone({ freq: 920 + (count || 1) * 55, dur: 0.04, type: 'triangle', vol: 0.15 });
+      tone({ freq: 920 + (count || 1) * 55, dur: 0.04, type: 'triangle', vol: 0.18 });
     },
-    deselect: function () { tone({ freq: 600, dur: 0.04, type: 'triangle', vol: 0.11 }); },
-    fold: function () { tone({ freq: 700, slideTo: 420, dur: 0.1, type: 'sine', vol: 0.15 }); },
-    unfold: function () { tone({ freq: 420, slideTo: 700, dur: 0.1, type: 'sine', vol: 0.15 }); },
+    deselect: function () { tone({ freq: 600, dur: 0.04, type: 'triangle', vol: 0.14 }); },
+    fold: function () { tone({ freq: 700, slideTo: 420, dur: 0.1, type: 'sine', vol: 0.16 }); },
+    unfold: function () { tone({ freq: 420, slideTo: 700, dur: 0.1, type: 'sine', vol: 0.16 }); },
     coachOn: function () {
       tone({ freq: 523, dur: 0.08, type: 'sine', vol: 0.2 });
       tone({ freq: 784, dur: 0.12, type: 'sine', vol: 0.2, delay: 0.09 });
     },
     coachOff: function () {
-      tone({ freq: 659, dur: 0.08, type: 'sine', vol: 0.17 });
-      tone({ freq: 440, dur: 0.12, type: 'sine', vol: 0.17, delay: 0.09 });
+      tone({ freq: 659, dur: 0.08, type: 'sine', vol: 0.18 });
+      tone({ freq: 440, dur: 0.12, type: 'sine', vol: 0.18, delay: 0.09 });
     },
-    page: function () { noise({ dur: 0.08, vol: 0.11, freq: 1200, type: 'bandpass' }); },
+    page: function () { noise({ dur: 0.08, vol: 0.12, freq: 1200, type: 'bandpass' }); },
     pop: function () { tone({ freq: 320, slideTo: 640, dur: 0.09, type: 'sine', vol: 0.2 }); },
-    whoosh: function () { noise({ dur: 0.12, vol: 0.11, freq: 800, freqTo: 3500, type: 'bandpass' }); },
+    whoosh: function () { noise({ dur: 0.12, vol: 0.12, freq: 800, freqTo: 3500, type: 'bandpass' }); },
     // 旧
-    play: function () { tone({ freq: 520, slideTo: 340, dur: 0.07, type: 'triangle', vol: 0.32 }); },
+    play: function () { tone({ freq: 520, slideTo: 340, dur: 0.07, type: 'triangle', vol: 0.26 }); },
     pass: function () { tone({ freq: 220, dur: 0.08, type: 'sine', vol: 0.22 }); },
     bomb: function () { boomSound(); },
-    click: function () { tone({ freq: 700, dur: 0.035, type: 'square', vol: 0.1 }); },
-    hint: function () { tone({ freq: 980, dur: 0.06, type: 'sine', vol: 0.18 }); },
+    click: function () { tone({ freq: 700, dur: 0.035, type: 'square', vol: 0.13 }); },
+    hint: function () { tone({ freq: 980, dur: 0.06, type: 'sine', vol: 0.2 }); },
     win: function () {
       [523, 659, 784, 1047].forEach(function (f, i) {
-        tone({ freq: f, dur: 0.16, type: 'triangle', vol: 0.32, delay: i * 0.13 });
+        tone({ freq: f, dur: 0.16, type: 'triangle', vol: 0.28, delay: i * 0.13 });
       });
     },
     lose: function () {
-      tone({ freq: 330, slideTo: 262, dur: 0.22, type: 'triangle', vol: 0.28 });
-      tone({ freq: 262, slideTo: 196, dur: 0.3, type: 'triangle', vol: 0.28, delay: 0.22 });
+      tone({ freq: 330, slideTo: 262, dur: 0.22, type: 'triangle', vol: 0.24 });
+      tone({ freq: 262, slideTo: 196, dur: 0.3, type: 'triangle', vol: 0.24, delay: 0.22 });
     }
   };
 
