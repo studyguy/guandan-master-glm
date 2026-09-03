@@ -258,6 +258,14 @@
           renderHand(st);
           updateComboLabel(st);
         });
+        // 锁牌：长按 500ms（锁定后恒定排在牌堆最左）；右键 = 一次性取消全部选牌
+        e.addEventListener('pointerdown', function () {
+          clearTimeout(e._lpTimer);
+          e._lpTimer = setTimeout(function () { UI._lpFired = c.id; toggleLock(c, st); }, 500);
+        });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (evName) {
+          e.addEventListener(evName, function () { clearTimeout(e._lpTimer); });
+        });
         colDiv.appendChild(e);
       });
       box.appendChild(colDiv);
@@ -297,18 +305,29 @@
   }
 
   function getSelected() { return Object.keys(UI.selected).map(function (k) { return UI.selected[k]; }); }
+  // 选牌反馈显示在 AI 教练侧栏（不与手牌区重叠）
   function updateComboLabel(st) {
-    var lab = $('#combo-label'), btn = $('#btn-play');
+    var box = $('#cs-select'), btn = $('#btn-play');
     var sel = getSelected();
-    if (!sel.length) { lab.innerHTML = ''; lab.classList.add('hidden'); btn.disabled = true; return; }
-    lab.classList.remove('hidden');
+    if (!sel.length) { box.innerHTML = ''; box.classList.add('hidden'); btn.disabled = true; btn.title = ''; return; }
+    box.classList.remove('hidden');
     var view = UI.game.viewFor(HUMAN);
     var ev = DD.evaluateSelection(sel, view);
     btn.disabled = !ev.ok; btn.title = ev.ok ? '' : '无法这样出牌';
     if (ev.ok) {
       var enemyTop = view.lastPlay && view.players[view.lastPlay.playerIdx].team !== view.me.team;
-      lab.innerHTML = '已选：<b>' + ev.label + '</b> ' + (view.lastPlay && enemyTop ? '<span class="ok">✓ 压得上家</span>' : '<span class="ok">✓ 可出</span>');
-    } else { lab.innerHTML = '<span class="warn">✗ ' + ev.msg + '</span>'; }
+      box.innerHTML = '已选 <b>' + sel.length + '</b> 张：<b>' + ev.label + '</b> ' + (view.lastPlay && enemyTop ? '<span class="ok">✓ 压得上家</span>' : '<span class="ok">✓ 可出</span>');
+    } else { box.innerHTML = '<span class="warn">✗ ' + ev.msg + '</span>'; }
+  }
+  // 一次性取消全部选中的牌（手牌区右键 / Esc）
+  function cancelAllSelection() {
+    if (!Object.keys(UI.selected).length && UI.selectedPlanKey == null) return;
+    UI.selected = {};
+    UI.selectedPlanKey = null;
+    clearHint();
+    DD.SFX && DD.SFX.play('deselect');
+    if (UI.game) { renderHand(UI.game.state()); renderPlans(UI.game.viewFor(HUMAN)); }
+    updateComboLabel(UI.game ? UI.game.state() : null);
   }
   function quickPlay(cards) {
     if (!cards || !cards.length) return;
@@ -599,7 +618,6 @@
     var myTurn = st.phase === 'playing' && st.turn === HUMAN;
     var actions = $('#actions');
     actions.classList.toggle('hidden', !myTurn);
-    $('#combo-label').classList.toggle('hidden', st.phase !== 'playing');
     if (myTurn) {
       var passable = !!st.lastPlay;
       $('#btn-pass').disabled = !passable;
@@ -665,6 +683,8 @@
         if (open && UI.advice && UI.advice.move) highlight(UI.advice.move.cards); else clearHint();
       }
     });
+    // 手牌区右键：一次性取消全部选中的牌
+    $('#hand').addEventListener('contextmenu', function (ev) { ev.preventDefault(); cancelAllSelection(); });
     $('#btn-coach-close').addEventListener('click', function (e) { e.stopPropagation(); setCoachOpen(false); });
     $('#side-backdrop').addEventListener('click', function () { setCoachOpen(false); });
     $('#btn-counter-fold').addEventListener('click', function (e) { e.stopPropagation(); DD.SFX && DD.SFX.play('fold'); UI.settings.counterFolded = true; UI.counterOpenMobile = false; saveSettings(); if (UI.game) renderCounter(UI.game.state()); });
@@ -717,7 +737,7 @@
       if (st.phase !== 'playing' || st.turn !== HUMAN) return;
       if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); onPlay(); }
       else if (e.code === 'KeyP') onPass();
-      else if (e.code === 'Escape') { UI.selected = {}; UI.selectedPlanKey = null; renderHand(st); updateComboLabel(st); renderPlans(UI.game.viewFor(HUMAN)); }
+      else if (e.code === 'Escape') { cancelAllSelection(); }
     });
   }
 

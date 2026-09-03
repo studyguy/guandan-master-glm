@@ -18,7 +18,7 @@ html, body { height: 100%; overscroll-behavior: none; }
   --card-w: 44px; --card-h: calc(var(--card-w) * 1.42); --card-overlap: calc(var(--card-w) * -0.4);
   /* 底部纵向泳道（hand → combo-label → me-bar → actions → play-0）随卡牌等比伸缩 */
   --lane-hand: 8px;
-  --lane-combo: calc(var(--lane-hand) + var(--card-h) + 0.16 * var(--card-w));
+  --lane-combo: calc(var(--lane-hand) + var(--card-h) + 0.16 * var(--card-w)); /* 保留变量名兼容旧引用 */
   --lane-me: calc(var(--lane-combo) + 0.45 * var(--card-w));
   --lane-actions: calc(var(--lane-hand) + var(--card-h) + var(--hand-rise, 0px) + 0.2 * var(--card-w));
   --lane-play0: calc(var(--lane-actions) + 0.8 * var(--card-w));
@@ -187,8 +187,6 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   background: rgba(0,0,0,.3); padding: 3px 12px; border-radius: 999px; }
 #me-bar .avatar { width: max(26px, calc(var(--card-w) * 0.5)); height: max(26px, calc(var(--card-w) * 0.5)); border-radius: 50%; background: #1d5c3f; display: flex; align-items: center; justify-content: center; font-size: max(16px, calc(var(--card-w) * 0.3)); }
 .me-rank { color: var(--c-accent); }
-#combo-label { position: absolute; bottom: var(--lane-combo); left: 50%; transform: translateX(-50%);
-  z-index: 9; font-size: clamp(12px, 1.25vmin + 2px, 18px); white-space: nowrap; }
 
 /* 手牌（纵向列排列：同点数一列叠放，列间留缝；炸弹=高列一眼可判） */
 #hand { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; align-items: flex-end; }
@@ -198,6 +196,10 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 #hand .card:hover { transform: translateY(-6px); }
 #hand .card.sel { transform: translateY(-18px); box-shadow: 0 8px 16px rgba(0,0,0,.45); }
 #hand .card.hinted { box-shadow: 0 0 0 3px var(--c-accent), 0 4px 10px rgba(0,0,0,.4); }
+/* 已选中的牌：蓝色描边 + 底部 ✓ 角标，与金色推荐框区分 */
+#hand .card.sel { border-color: var(--c-info); box-shadow: 0 8px 16px rgba(0,0,0,.45), 0 0 0 2px rgba(143,214,255,.75); }
+#hand .card.sel::before { content: '✓'; position: absolute; bottom: 5%; right: 6%;
+  font-size: max(10px, calc(var(--card-w) * 0.2)); color: var(--c-info); font-weight: bold; z-index: 2; }
 
 /* 操作按钮 */
 #actions { position: absolute; bottom: var(--lane-actions); left: 50%; transform: translateX(-50%);
@@ -245,6 +247,12 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   padding-right: 2px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.22) transparent; }
 .cs-scroll::-webkit-scrollbar { width: 5px; }
 .cs-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.22); border-radius: 999px; }
+.cs-select { font-size: clamp(11px, 1.05vmin + 3px, 15px); line-height: 1.5; padding: 6px 10px;
+  background: rgba(143,214,255,.08); border: 1px solid rgba(143,214,255,.25); border-radius: var(--r-sm);
+  color: var(--c-text); }
+.cs-select:empty { display: none; }
+.cs-select .warn { color: #ffb84d; }
+.cs-select .ok { color: var(--c-success); }
 .cs-situation { font-size: clamp(11px, 1vmin + 3px, 15px); color: var(--c-text-dim); line-height: 1.5; padding: 6px 10px;
   background: rgba(255,255,255,.05); border-radius: var(--r-sm); }
 .cs-analysis-wrap { border-bottom: 1px dashed rgba(255,255,255,.12); padding-bottom: 6px; }
@@ -385,7 +393,6 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   #center-msg { top: 38%; }
   #play-2 { top: 56px; }
   #play-0 { bottom: 128px; }
-  #combo-label { bottom: 56px; }
   #actions { bottom: 78px; }
 }
 
