@@ -26,11 +26,11 @@
       });
     });
     $('#btn-start').addEventListener('click', function () { DD.startGame(); });
-    $('#btn-tutorial').addEventListener('click', function () { $('#modal-tutorial').classList.remove('hidden'); });
-    $('#btn-game-tutorial').addEventListener('click', function () { $('#modal-tutorial').classList.remove('hidden'); });
-    $('#btn-home-coach').addEventListener('click', function () { DD.UI.settings.coach = !DD.UI.settings.coach; save(); renderToggles(); });
+    $('#btn-tutorial').addEventListener('click', function () { DD.SFX.play('pop'); $('#modal-tutorial').classList.remove('hidden'); });
+    $('#btn-game-tutorial').addEventListener('click', function () { DD.SFX.play('pop'); $('#modal-tutorial').classList.remove('hidden'); });
+    $('#btn-home-coach').addEventListener('click', function () { DD.UI.settings.coach = !DD.UI.settings.coach; DD.SFX.play(DD.UI.settings.coach ? 'coachOn' : 'coachOff'); save(); renderToggles(); });
     $('#btn-home-counter').addEventListener('click', function () { DD.UI.settings.counter = !DD.UI.settings.counter; save(); renderToggles(); });
-    $('#btn-tutorial-close').addEventListener('click', function () { $('#modal-tutorial').classList.add('hidden'); });
+    $('#btn-tutorial-close').addEventListener('click', function () { DD.SFX.play('fold'); $('#modal-tutorial').classList.add('hidden'); });
     renderToggles();
   }
 
@@ -46,6 +46,7 @@
     var tabs = document.querySelectorAll('#tutorial-tabs .tab');
     tabs.forEach(function (t) {
       t.addEventListener('click', function () {
+        DD.SFX.play('page');
         tabs.forEach(function (x) { x.classList.remove('on'); });
         t.classList.add('on');
         document.querySelectorAll('#tutorial-panels .panel').forEach(function (p) {

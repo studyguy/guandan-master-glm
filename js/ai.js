@@ -178,6 +178,53 @@
     return { columns: groups, cards: cards, marks: marks };
   };
 
+  /**
+   * 理牌列结构（供手牌纵向渲染）：按模式把手牌拆成"列"数组。
+   * @param mode 'smart' 智能理牌 | 'suit' 按花色 | 'rank' 按大小
+   * @param lockedMap 锁牌表（id→true）：锁牌恒为最左一列，不受排序影响
+   * @returns {{columns: Array<{tag:string, cards:Array}>}}
+   */
+  DD.arrangeHandColumns = function (hand, level, mode, lockedMap) {
+    lockedMap = lockedMap || {};
+    function byVD(a, b) { return a.v - b.v || a.s - b.s || a.d - b.d; }
+    var columns = [];
+
+    // 锁牌列恒定最左：单列纵向排放，内部按点数升序
+    var locked = hand.filter(function (c) { return lockedMap[c.id]; }).sort(byVD);
+    if (locked.length) columns.push({ tag: '锁', cards: locked });
+
+    var rest = hand.filter(function (c) { return !lockedMap[c.id]; });
+
+    if (mode === 'suit') {
+      // 按花色：♠ ♥ ♣ ♦ 各成一列连排，王列最右
+      [0, 1, 2, 3].forEach(function (suit) {
+        var cards = rest.filter(function (c) { return c.s === suit; }).sort(byVD);
+        if (cards.length) columns.push({ tag: '', cards: cards });
+      });
+      var js = rest.filter(function (c) { return c.s < 0; }).sort(function (a, b) { return a.v - b.v; });
+      if (js.length) columns.push({ tag: '王', cards: js });
+      return { columns: columns };
+    }
+
+    if (mode === 'rank') {
+      // 按大小：同有效点数一列，列按点数升序
+      var sorted = DD.sortByLevel(rest, level);
+      var cur = null;
+      sorted.forEach(function (c) {
+        var eff = DD.effOf(c.v, level);
+        if (!cur || cur.eff !== eff) { cur = { eff: eff, cards: [] }; columns.push(cur); }
+        cur.cards.push(c);
+      });
+      return { columns: columns };
+    }
+
+    // 智能理牌：王→炸弹→同花色连张(同顺)→三张→对子→单张
+    DD.arrangeHandSmart(rest, level).columns.forEach(function (g) {
+      columns.push({ tag: g.tag, cards: g.cards });
+    });
+    return { columns: columns };
+  };
+
   function enemyMin(view) {
     var mn = 99;
     view.players.forEach(function (p) {

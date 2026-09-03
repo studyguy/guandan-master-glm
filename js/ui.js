@@ -232,8 +232,8 @@
           var wasArmed = UI.selectedPlanKey != null;
           UI.selectedPlanKey = null; clearHint();
           if (wasArmed) renderPlans(UI.game.viewFor(HUMAN));
-          if (UI.selected[c.id]) { delete UI.selected[c.id]; e.classList.remove('sel'); }
-          else { UI.selected[c.id] = c; e.classList.add('sel'); }
+          if (UI.selected[c.id]) { delete UI.selected[c.id]; e.classList.remove('sel'); DD.SFX && DD.SFX.play('deselect'); }
+          else { UI.selected[c.id] = c; e.classList.add('sel'); DD.SFX && DD.SFX.play('select', Object.keys(UI.selected).length); }
           updateComboLabel(st);
         });
         colDiv.appendChild(e);
@@ -250,14 +250,22 @@
     var table = document.getElementById('table');
     var tw = table && table.clientWidth ? table.clientWidth : window.innerWidth;
     var avail = Math.max(cw, tw - 24);
-    // 理牌分组间隔计入总宽预算，保证分组不把整列撑出牌桌
-    var gapExtra = Math.max(10, cw * 0.35);
-    var extras = 0;
-    for (var g = 1; g < n; g++) if (box.children[g].dataset && box.children[g].dataset.gap) extras += gapExtra;
-    var pitch = n > 1 ? Math.max(cw * 0.55, Math.min(cw + 6, (avail - n * cw - extras) / (n - 1) + cw)) : cw;
+    // 横向空间不足时逐级加深列间叠压：先收紧理牌分组间隔，再压缩列距，
+    // 下限为只露左上角"牌号+花色"角标（0.38 列宽）
+    function pitchFor(gapUnit) {
+      var ex = 0;
+      for (var g = 1; g < n; g++) if (box.children[g].dataset && box.children[g].dataset.gap) ex += gapUnit;
+      return (avail - n * cw - ex) / Math.max(1, n - 1) + cw;
+    }
+    var gapFull = Math.max(10, cw * 0.35);
+    var gapUnit = gapFull;
+    var pitch = pitchFor(gapUnit);
+    if (pitch < cw * 0.38) { gapUnit = gapFull * 0.5; pitch = pitchFor(gapUnit); }
+    if (pitch < cw * 0.38) { gapUnit = 0; pitch = pitchFor(gapUnit); }
+    pitch = Math.max(cw * 0.38, Math.min(pitch, cw + 6));
     for (var i = 0; i < n; i++) {
       var node = box.children[i];
-      var extra = node.dataset && node.dataset.gap ? gapExtra : 0;
+      var extra = node.dataset && node.dataset.gap ? gapUnit : 0;
       node.style.marginLeft = i === 0 ? '0px' : (pitch - cw + extra).toFixed(1) + 'px';
     }
   }
@@ -489,6 +497,7 @@
     var st = UI.game ? UI.game.state() : null;
     switch (ev) {
       case 'deal':
+        DD.SFX && DD.SFX.play('deal');
         UI.playedAcc = {}; UI.selected = {}; UI.plans = []; UI.review = ''; UI.selectedPlanKey = null;
         clearPlays(); renderAll(st); break;
       case 'state': renderAll(st); break;
@@ -522,22 +531,25 @@
         break;
       case 'pass': showPass(d.idx); bubble(d.idx, '不出'); DD.SFX && DD.SFX.play('pass'); break;
       case 'alarm':
+        DD.SFX && DD.SFX.play('alarm');
         bubble(d.idx, d.idx === HUMAN ? '你只剩 ' + d.count + ' 张！' : '只剩 ' + d.count + ' 张！', 2200);
         break;
       case 'finish':
+        DD.SFX && DD.SFX.play('rank', d.order);
         bubble(d.idx, UI.orderBadges[d.order], 2600);
         if (UI.settings.counter) renderCounter(UI.game.state());
         break;
       case 'trickLead':
         clearPlays();
+        if (d.windfall) DD.SFX && DD.SFX.play('windfall');
         if (d.windfall && d.leader !== HUMAN) {
           bubble(d.leader, d.leader === 2 ? '对家接风！' : (st.players[d.leader].name + ' 接风'), 2200);
         } else if (d.windfall) {
           bubble(HUMAN, '你接风，继续出牌！', 2200);
         }
         break;
-      case 'handOver': renderOver(d); break;
-      case 'sessionOver': DD.SFX && DD.SFX.play(d.winnerTeam === ME_TEAM ? 'win' : 'lose'); renderSession(d); break;
+      case 'handOver': DD.SFX && DD.SFX.play(d.winnerTeam === ME_TEAM ? 'handWin' : 'handLose'); renderOver(d); break;
+      case 'sessionOver': DD.SFX && DD.SFX.play(d.winnerTeam === ME_TEAM ? 'fanfare' : 'lose'); renderSession(d); break;
     }
   }
 
@@ -613,6 +625,7 @@
     $('#btn-pass').addEventListener('click', onPass);
     $('#btn-analysis-toggle').addEventListener('click', function () {
       var open = !UI.analysisOpen; setAnalysis(open);
+      DD.SFX && DD.SFX.play(open ? 'hint' : 'fold');
       var st = UI.game ? UI.game.state() : null;
       if (st && st.phase === 'playing' && st.turn === HUMAN) {
         if (open && UI.advice && UI.advice.move) highlight(UI.advice.move.cards); else clearHint();
@@ -620,8 +633,8 @@
     });
     $('#btn-coach-close').addEventListener('click', function (e) { e.stopPropagation(); setCoachOpen(false); });
     $('#side-backdrop').addEventListener('click', function () { setCoachOpen(false); });
-    $('#btn-counter-fold').addEventListener('click', function (e) { e.stopPropagation(); UI.settings.counterFolded = true; UI.counterOpenMobile = false; saveSettings(); if (UI.game) renderCounter(UI.game.state()); });
-    $('#counter').addEventListener('click', function () { if (UI.settings.counterFolded || UI.counterOpenMobile !== true) { UI.settings.counterFolded = false; UI.counterOpenMobile = true; saveSettings(); if (UI.game) renderCounter(UI.game.state()); } });
+    $('#btn-counter-fold').addEventListener('click', function (e) { e.stopPropagation(); DD.SFX && DD.SFX.play('fold'); UI.settings.counterFolded = true; UI.counterOpenMobile = false; saveSettings(); if (UI.game) renderCounter(UI.game.state()); });
+    $('#counter').addEventListener('click', function () { if (UI.settings.counterFolded || UI.counterOpenMobile !== true) { DD.SFX && DD.SFX.play('unfold'); UI.settings.counterFolded = false; UI.counterOpenMobile = true; saveSettings(); if (UI.game) renderCounter(UI.game.state()); } });
     window.addEventListener('resize', function () {
       layoutHand(); renderCoachShell(); checkRotateHint();
       if (UI.game && !$('#screen-game').classList.contains('hidden')) renderFansOpponents(UI.game.state());
@@ -633,12 +646,14 @@
     $('#btn-sess-again').addEventListener('click', startGame);
     $('#btn-next').addEventListener('click', function () { $('#modal-over').classList.add('hidden'); clearPlays(); UI.selected = {}; UI.review = ''; UI.game.nextGame(); });
     $('#btn-counter-toggle').addEventListener('click', function () {
+      DD.SFX && DD.SFX.play('click');
       UI.settings.counter = !UI.settings.counter; saveSettings();
       this.textContent = '🔍 记牌器' + (UI.settings.counter ? '' : '：关');
       if (UI.game) renderCounter(UI.game.state());
     });
     $('#btn-coach-toggle').addEventListener('click', function () {
       setCoachOpen(!UI.settings.coach);
+      DD.SFX && DD.SFX.play(UI.settings.coach ? 'coachOn' : 'coachOff');
       this.textContent = '🎓 教练' + (UI.settings.coach ? '' : '：关');
       if (UI.game) renderAll(UI.game.state());
     });

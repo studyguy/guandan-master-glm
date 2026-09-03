@@ -96,7 +96,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   box-shadow: 0 1px 4px rgba(0,0,0,.35); position: relative; cursor: pointer; user-select: none;
   touch-action: manipulation; color: #1d2a24; }
 .card.red { color: #c33; }
-.card .corner { position: absolute; top: 4%; left: 8%; font-size: calc(var(--card-w) * 0.27); font-weight: bold; line-height: 1; white-space: nowrap; }
+.card .corner { position: absolute; top: 4%; left: 5%; font-size: calc(var(--card-w) * 0.27); font-weight: bold; line-height: 1; white-space: nowrap; }
 .card .corner i { display: inline-block; font-style: normal; font-size: calc(var(--card-w) * 0.26); margin-left: calc(var(--card-w) * 0.04); vertical-align: top; }
 .card .pip { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: calc(var(--card-w) * 0.45); opacity: .9; }
 .card.joker-big, .card.joker-small { background: linear-gradient(160deg, #fff, #f0e9df); }
