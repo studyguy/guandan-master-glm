@@ -59,7 +59,7 @@
     var isWild = DD.isWild(c, (UI.game && UI.game.state().tableLevel) || 2);
     if (c.v >= 15) {
       e.classList.add(c.v === 16 ? 'joker-big' : 'joker-small');
-      e.innerHTML = '<div class="jk">王</div>';
+      e.innerHTML = '<div class="corner">' + (c.v === 16 ? '大王' : '小王') + '</div><div class="jk">王</div>';
     } else {
       var red = DD.SUITS[c.s].red;
       if (red) e.classList.add('red');
@@ -250,13 +250,6 @@
       var extra = node.dataset && node.dataset.gap ? gapExtra : 0;
       node.style.marginLeft = i === 0 ? '0px' : (pitch - cw + extra).toFixed(1) + 'px';
     }
-    // 纵向叠牌高度告知泳道系统：手牌上方的间距随最高列自适应
-    var stackH = 0;
-    for (var j = 0; j < n; j++) {
-      var h = box.children[j].offsetHeight - cw * 1.42;
-      if (h > stackH) stackH = h;
-    }
-    document.documentElement.style.setProperty('--stack-h', Math.max(0, Math.round(stackH)) + 'px');
   }
 
   function getSelected() { return Object.keys(UI.selected).map(function (k) { return UI.selected[k]; }); }

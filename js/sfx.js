@@ -4,6 +4,7 @@
  *   play  出牌"嗒"   pass 过牌低音
  *   bomb  炸弹低频爆响 + 噪声        click/hint 按钮/提示
  *   win   胜利上行琶音               lose 失败下行音
+ *   BGM   music/bgm.mp3 循环背景音乐（跟随 enabled 开关）
  * 可通过 DD.SFX.enabled（设置持久化）一键开关；
  * 惰性创建 AudioContext，首次用户手势后解锁自动播放限制。
  * ========================================================= */
@@ -12,10 +13,16 @@
   var DD = root.DD = root.DD || {};
 
   var SFX = DD.SFX = {
-    enabled: true,
     _ctx: null,
     _master: null
   };
+  // enabled 用存取器实现：切换音效开关时同步暂停/续播背景音乐
+  var _bgmSync = function () {};
+  Object.defineProperty(SFX, 'enabled', {
+    get: function () { return SFX._enabled !== false; },
+    set: function (v) { SFX._enabled = v !== false; _bgmSync(); }
+  });
+  SFX._enabled = true;
 
   function getCtx() {
     if (SFX._ctx) return SFX._ctx;
@@ -40,6 +47,28 @@
     };
     document.addEventListener('pointerdown', unlock);
     document.addEventListener('keydown', unlock);
+    // ===== 背景音乐 BGM：循环播放，跟随 enabled 开关 =====
+    var bgm = null;
+    try {
+      bgm = new Audio('music/bgm.mp3');
+      bgm.loop = true;
+      bgm.volume = 0.35;
+    } catch (e) { bgm = null; }
+    function bgmSync() {
+      if (!bgm) return;
+      if (SFX.enabled) { bgm.play().catch(function () { /* 等待首次用户手势 */ }); }
+      else bgm.pause();
+    }
+    DD.BGM = {
+      play: function () { bgmSync(); },
+      pause: function () { if (bgm) bgm.pause(); }
+    };
+    // 启动即尝试自动播放；被自动播放策略拦截时，首次用户手势自动续播
+    var bgmKick = function () { _bgmSync(); };
+    document.addEventListener('pointerdown', bgmKick);
+    document.addEventListener('keydown', bgmKick);
+    _bgmSync = function () { bgmSync(); };
+    bgmSync();
   }
 
   // 单音：freq 起始频率，slideTo 滑向频率（可选），delay 相对当前时刻
