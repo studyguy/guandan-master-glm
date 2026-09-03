@@ -1,6 +1,9 @@
 # 开发进度与交接（PROGRESS）
 
 > 最后更新：2026-09-03
+> **GitHub 仓库（私有）**：https://github.com/studyguy/guandan-master-glm
+> 克隆：`git clone https://github.com/studyguy/guandan-master-glm.git`
+> 说明：GitHub 不支持中文仓库名，名称取 ASCII「guandan-master-glm」，项目标题为「掼蛋大师训练营」。
 > 本文件用于跨电脑继续开发：**先读本文件**，再继续按 TODO 推进。
 
 ## 一、项目是什么
