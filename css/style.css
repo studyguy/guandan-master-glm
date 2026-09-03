@@ -226,13 +226,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   background: rgba(255,255,255,.12); color: #cfe8da; font-size: 12px; line-height: 1; padding: 0; }
 .fold-btn:hover { background: rgba(255,255,255,.3); }
 
-/* 悬浮球与抽屉 */
-#coach-fab { position: absolute; right: 12px; bottom: calc(var(--lane-actions) + var(--card-w) * 0.1); z-index: 30;
-  width: max(52px, calc(var(--card-w) * 1.05)); height: max(52px, calc(var(--card-w) * 1.05)); border-radius: 50%; border: 2px solid rgba(255,255,255,.35); font-size: max(24px, calc(var(--card-w) * 0.45));
-  background: linear-gradient(180deg, #2f9066, #1d5c3f); box-shadow: var(--shadow-md); }
-#coach-fab:active { transform: scale(.94); }
-.fab-badge { position: absolute; top: -8px; right: -10px; font-style: normal; background: var(--c-accent); color: #4a2f00;
-  font-size: 10px; font-weight: bold; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+/* 抽屉遮罩 */
 #side-backdrop { position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.5); }
 
 /* ================= AI 教练侧边栏 ================= */
@@ -366,7 +360,6 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   #counter { top: 4px; right: 2px; transform-origin: top right; zoom: .85; }
   #hand { bottom: 4px; }
   .act-btn { min-width: 86px; padding: 8px 10px; font-size: 13px; }
-  #coach-fab { bottom: 120px; right: 8px; width: 48px; height: 48px; font-size: 22px; }
 }
 /* 横屏手机精调（高度紧张：隐藏 table-last——各出牌区已有牌型标签；
    me-bar 移出中央泳道到左下角，中央留给 play-0/actions/combo-label） */

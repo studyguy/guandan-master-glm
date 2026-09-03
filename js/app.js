@@ -66,7 +66,7 @@
   function initAutotest() {
     var q = new URLSearchParams(location.search);
     if (q.get('autotest') === 'autoplay') DD.UI.autoplay = true;
-    if (q.get('side') === '1') { DD.UI.settings.coachOpen = true; localStorage.setItem('dd_trainer_settings', JSON.stringify(DD.UI.settings)); }
+    if (q.get('side') === '1') { DD.UI.settings.coach = true; localStorage.setItem('dd_trainer_settings', JSON.stringify(DD.UI.settings)); }
     window.addEventListener('error', function (e) {
       var d = document.createElement('div');
       d.style.cssText = 'position:fixed;bottom:0;left:0;z-index:99999;background:#a00;color:#fff;font-size:12px;padding:4px;';

@@ -13,7 +13,7 @@
   var ME_TEAM = 0;
 
   var UI = DD.UI = {
-    settings: { difficulty: 'easy', coach: true, counter: true, sound: true, coachOpen: true, counterFolded: false, rotateDismissed: false, sortMode: 'smart' },
+    settings: { difficulty: 'easy', coach: true, counter: true, sound: true, counterFolded: false, rotateDismissed: false, sortMode: 'smart' },
     game: null,
     selected: {}, advice: null, plans: [],
     selectedPlanKey: null, review: '', analysisOpen: false,
@@ -29,12 +29,11 @@
       for (var k in s) if (k in UI.settings) UI.settings[k] = s[k];
       UI.stats = Object.assign({ wins: 0, games: 0 }, JSON.parse(localStorage.getItem('dd_trainer_stats') || '{}'));
     } catch (e) { /* ignore */ }
-    // 窄屏首次使用（无持久化偏好）默认收起抽屉，避免开局即遮挡牌桌
+    // 旧设置迁移：coachOpen（悬浮球时代的展开态）与"花色排序"不再使用
     try {
-      if (isMobileLayout() && !localStorage.getItem('dd_trainer_settings')) UI.settings.coachOpen = false;
+      if (UI.settings.sortMode === 'suit') UI.settings.sortMode = 'smart';
+      delete UI.settings.coachOpen;
     } catch (e) { /* ignore */ }
-    // 旧版"花色排序"已升级为智能理牌
-    if (UI.settings.sortMode === 'suit') UI.settings.sortMode = 'smart';
     DD.SFX.enabled = UI.settings.sound !== false;
   }
   function saveSettings() { try { localStorage.setItem('dd_trainer_settings', JSON.stringify(UI.settings)); } catch (e) { /* */ } }
@@ -314,17 +313,16 @@
 
   // ---------- 教练侧栏 ----------
   function renderCoachShell() {
-    var side = $('#coach-side'), fab = $('#coach-fab'), bd = $('#side-backdrop');
-    var show = UI.settings.coach && UI.game && UI.settings.coachOpen;
+    var side = $('#coach-side'), bd = $('#side-backdrop');
+    var show = !!UI.settings.coach && !!UI.game;
     var mob = isMobileLayout();
     side.classList.toggle('hidden', !show);
     side.classList.toggle('open', show && mob);
     bd.classList.toggle('hidden', !(show && mob));
-    fab.classList.toggle('hidden', !(UI.settings.coach && UI.game) || show);
   }
   function setCoachOpen(open) {
-    var was = UI.settings.coachOpen;
-    UI.settings.coachOpen = !!open; saveSettings();
+    var was = UI.settings.coach;
+    UI.settings.coach = !!open; saveSettings();
     if (isMobileLayout() && open !== was) {
       var side = $('#coach-side');
       if (open) { renderCoachShell(); void side.offsetWidth; side.classList.add('open'); return; }
@@ -392,9 +390,6 @@
       });
       box.appendChild(row);
     });
-    var badge = $('#coach-fab-badge');
-    var rec = UI.plans[0];
-    badge.textContent = rec ? (rec.pass ? '不出' : shortLabel(rec.move.info)) : 'AI';
   }
   function shortLabel(info) {
     var RN = DD.RANK_NAME;
@@ -418,7 +413,6 @@
       UI.selected = {};
     }
     UI.selectedPlanKey = null;
-    if (isMobileLayout()) setCoachOpen(false);
   }
 
   // ---------- 结算 ----------
@@ -613,7 +607,6 @@
       }
     });
     $('#btn-coach-close').addEventListener('click', function (e) { e.stopPropagation(); setCoachOpen(false); });
-    $('#coach-fab').addEventListener('click', function () { setCoachOpen(true); });
     $('#side-backdrop').addEventListener('click', function () { setCoachOpen(false); });
     $('#btn-counter-fold').addEventListener('click', function (e) { e.stopPropagation(); UI.settings.counterFolded = true; UI.counterOpenMobile = false; saveSettings(); if (UI.game) renderCounter(UI.game.state()); });
     $('#counter').addEventListener('click', function () { if (UI.settings.counterFolded || UI.counterOpenMobile !== true) { UI.settings.counterFolded = false; UI.counterOpenMobile = true; saveSettings(); if (UI.game) renderCounter(UI.game.state()); } });
@@ -638,9 +631,9 @@
       if (UI.game) renderCounter(UI.game.state());
     });
     $('#btn-coach-toggle').addEventListener('click', function () {
-      UI.settings.coach = !UI.settings.coach; saveSettings();
+      setCoachOpen(!UI.settings.coach);
       this.textContent = '🎓 教练' + (UI.settings.coach ? '' : '：关');
-      renderCoachShell(); if (UI.game) renderAll(UI.game.state());
+      if (UI.game) renderAll(UI.game.state());
     });
     $('#btn-sort-toggle').addEventListener('click', function () {
       UI.settings.sortMode = UI.settings.sortMode === 'smart' ? 'rank' : 'smart';
