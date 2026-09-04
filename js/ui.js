@@ -290,6 +290,8 @@
   function updateComboLabel(st) {
     var box = $('#cs-select'), btn = $('#btn-play');
     var sel = getSelected();
+    var clearBtn = $('#btn-clear-sel');
+    if (clearBtn) clearBtn.classList.toggle('hidden', !sel.length);
     if (!sel.length) { box.innerHTML = ''; box.classList.add('hidden'); btn.disabled = true; btn.title = ''; return; }
     box.classList.remove('hidden');
     var view = UI.game.viewFor(HUMAN);
@@ -665,6 +667,8 @@
     });
     // 手牌区右键：一次性取消全部选中的牌
     $('#hand').addEventListener('contextmenu', function (ev) { ev.preventDefault(); cancelAllSelection(); });
+    $('#btn-clear-sel').addEventListener('click', function () { DD.SFX && DD.SFX.play('click'); cancelAllSelection(); });
+    $('#cs-select').addEventListener('click', function () { cancelAllSelection(); });
     // 拖动选牌：按住左键拖动，途经的手牌都会被选中（松开结束）
     document.addEventListener('pointermove', function (ev) {
       var d = UI._drag;
@@ -689,6 +693,7 @@
       if (UI._drag && UI._drag.moved) UI._dragEnd = true; // 吞掉拖动结束后的 click
       UI._drag = null;
     });
+    document.addEventListener('pointercancel', function () { UI._drag = null; });
     $('#btn-coach-close').addEventListener('click', function (e) { e.stopPropagation(); setCoachOpen(false); });
     $('#side-backdrop').addEventListener('click', function () { setCoachOpen(false); });
     $('#counter').addEventListener('click', function () { if (isMobileLayout() && !UI.counterOpenMobile) { UI.counterOpenMobile = true; DD.SFX && DD.SFX.play('unfold'); if (UI.game) renderCounter(UI.game.state()); } });
